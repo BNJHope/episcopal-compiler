@@ -1,4 +1,4 @@
-main = print add3And4
+import CommandHandler
 
-add3And4 :: Int
-add3And4 = 3 + 4
+main = do
+	handleInput
