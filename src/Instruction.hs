@@ -1,6 +1,6 @@
 module Instruction
 (
-	Instruction
+Instruction
 ) where
 
 -- | A JVM instruction.

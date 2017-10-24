@@ -1,4 +1,4 @@
 import CommandHandler
 
 main = do
-	handleInput
+    handleInput

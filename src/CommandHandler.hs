@@ -13,7 +13,7 @@ import Data.List
 -- Handle the program input.
 handleInput :: IO()
 handleInput = do
-	writeInstructionsToFile "episcopal.out" $ compile $ getTestAST
+    writeInstructionsToFile "episcopal.out" $ compile $ getTestAST
 
 -- | Get the program info structure from the set of arguments.
 getProgramInfo :: [String] -> ProgramInfo

@@ -4,6 +4,6 @@ ProgramInfo(..)
 ) where
 
 data ProgramInfo = ProgramInfo {
-	filename :: String
-	, args :: [String]
+filename :: String
+, args :: [String]
 }
