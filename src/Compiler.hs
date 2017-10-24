@@ -5,6 +5,8 @@ module Compiler
 import Instruction
 import Structures
 import ProgramInfo
+import PrintResult
+import EpiscopalResult
 
 compile :: AST -> [Instruction]
-compile ast = ["helllo", "world"]
+compile ast = getPrintResultInstructions $ ConstantResult $ EInt 42
