@@ -1,12 +1,13 @@
 module Structures(
 AST,
-Constant(..)
+Constant(..),
+Expression(..)
 ) where
 
-type AST = Constant
+type AST = Expression
 
 -- | The expression type
-data Expr = EConstant Constant
+data Expression = EConstant Constant
 
 -- | Data type for a constant
 data Constant = EInt Integer
