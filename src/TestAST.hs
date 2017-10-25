@@ -9,4 +9,4 @@ getTestAST :: AST
 getTestAST = constant1
 
 constant1 :: Expression
-constant1 = EConstant $ EInt 42
+constant1 = EExpr $ ExprConstant $ EInt 42
