@@ -9,8 +9,8 @@ import Instruction
 getPrintResultInstructions :: Result -> [Instruction]
 getPrintResultInstructions (ConstantResult res) = [importPrintStreamInstruction]
     ++ [loadConstantOntoStack res]
-	++ [convertIntConstantToString]
-	++ [invokePrint]
+    ++ [convertIntConstantToString]
+    ++ [invokePrint]
 
 importPrintStreamInstruction :: Instruction
 importPrintStreamInstruction = "getstatic java/lang/System/out Ljava/io/PrintStream;"
@@ -18,7 +18,7 @@ importPrintStreamInstruction = "getstatic java/lang/System/out Ljava/io/PrintStr
 loadConstantOntoStack :: Constant -> Instruction
 loadConstantOntoStack (EInt int) | (int < 128) && (int > -129) = "bipush " ++ show int
     | (int < 32768) && (int > -32769) = "sipush " ++ show int
-	| otherwise = "ldc " ++ show int
+    | otherwise = "ldc " ++ show int
 
 convertIntConstantToString :: Instruction
 convertIntConstantToString = "invokestatic java/lang/String/valueOf(I)Ljava/lang/String;"
