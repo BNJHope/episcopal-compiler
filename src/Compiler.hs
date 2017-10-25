@@ -16,7 +16,7 @@ type LocalVariableLimit = Int
 compile :: AST -> [Instruction]
 compile ast = getFilePreamble "Episcopal"
     ++ getPrintResultInstructions (ConstantResult (EInt 42))
-	++ [getVoidReturn]
+    ++ [getVoidReturn]
 	++ [getEndMethod]
 
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
