@@ -14,13 +14,13 @@ type StackLimit = Int
 type LocalVariableLimit = Int
 
 compile :: AST -> [Instruction]
-compile ast = getFilePreamble
-    ++ getPrintResultInstructions $ ConstantResult $ EInt 42
-	++ getVoidReturn
-	++ getEndMethod
+compile ast = getFilePreamble "Episcopal"
+    ++ getPrintResultInstructions (ConstantResult (EInt 42))
+	++ [getVoidReturn]
+	++ [getEndMethod]
 
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
-loadAddressFromVariableOntoStack address = "aload_" ++ address
+loadAddressFromVariableOntoStack address = "aload_" ++ show address
 
 getFilePreamble :: ClassName -> [Instruction]
 getFilePreamble className = getClassPreamble className
@@ -32,8 +32,7 @@ getClassPreamble className = [getClassnameDefinitionLine className]
     ++ [getSuperConstructorLine]
 
 getInitMethod :: [Instruction]
-getInitMethod = [getInitMethod]
-    ++ [invokeObjectInit]
+getInitMethod = [getInitMethodHeader]
 	++ [loadAddressFromVariableOntoStack 0]
 	++ [invokeObjectInit]
 	++ [getVoidReturn]
@@ -60,10 +59,10 @@ getMainMethodHeader :: Instruction
 getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"
 
 getStackLimit :: StackLimit -> Instruction
-getStackLimit lim = ".limit stack " ++ lim
+getStackLimit lim = ".limit stack " ++ show lim
 
 getLocalsLimit :: LocalVariableLimit -> Instruction
-getLocalsLimit lim = ".limit locals " ++ lim
+getLocalsLimit lim = ".limit locals " ++ show lim
 
 getVoidReturn :: Instruction
 getVoidReturn = "return"
