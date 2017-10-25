@@ -1,5 +1,5 @@
 module EpisCompilable (
-	EpisCompilable
+EpisCompilable(..)
 ) where
 
 import Instruction
