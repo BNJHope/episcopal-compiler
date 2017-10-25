@@ -13,19 +13,58 @@ type VariableAddress = Int
 type StackLimit = Int
 type LocalVariableLimit = Int
 
-compile :: AST -> [Instruction]
-compile ast = getFilePreamble "Episcopal"
+compile :: Expression -> [Instruction]
+{-
+ 	compile ast = getFilePreamble "Episcopal"
     ++ getPrintResultInstructions (ConstantResult (EInt 42))
     ++ [getVoidReturn]
 	++ [getEndMethod]
+	-}
 
+{-
+compile (EProgram Program) = getFilePreamble programId
+    ++ compile programExpr
+	++ foldr (\query instructionList -> instructionList ++ compile query) [] programQueries
+	++ [getVoidReturn]
+	++ [getEndMethod]
+-}
+
+compile (EConstant const) = compileConstant const
+
+-- | Compile a constant
+compileConstant :: Constant -> [Instruction]
+compileConstant (EInt val) = compileInt val
+compileConstant (EFloat val) = compileFloat val
+compileConstant (EBoolean val) = compileBool val
+compileConstant (EPercentage val) = compilePercentage val
+
+-- | Compile an integer value
+compileInt :: Int -> [Instruction]
+compileInt val | (val < 128) && (val > -129) = ["bipush " ++ show val]
+    | (val < 32768) && (val > -32769) = ["sipush " ++ show val]
+    | otherwise = ["ldc " ++ show val]
+
+-- | Compile a float
+compileFloat :: Float -> [Instruction]
+compileFloat val = ["fconst_" ++ show val]
+
+-- | Compile a boolean
+compileBool :: Bool -> [Instruction]
+compileBool False = ["bipush " ++ show 0]
+compileBool True = ["bipush " ++ show 1]
+
+-- | Compile a percentage value
+compilePercentage :: Float -> [Instruction]
+compilePercentage val = ["fconst_" ++ show val]
+
+-- | Load the variable at the given address onto the stack
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
 loadAddressFromVariableOntoStack address = "aload_" ++ show address
 
 getFilePreamble :: ClassName -> [Instruction]
 getFilePreamble className = getClassPreamble className
     ++ getInitMethod
-	++ getMainMethod
+    ++ getMainMethod
 
 getClassPreamble :: ClassName -> [Instruction]
 getClassPreamble className = [getClassnameDefinitionLine className]
@@ -33,15 +72,15 @@ getClassPreamble className = [getClassnameDefinitionLine className]
 
 getInitMethod :: [Instruction]
 getInitMethod = [getInitMethodHeader]
-	++ [loadAddressFromVariableOntoStack 0]
-	++ [invokeObjectInit]
-	++ [getVoidReturn]
-	++ [getEndMethod]
+    ++ [loadAddressFromVariableOntoStack 0]
+    ++ [invokeObjectInit]
+    ++ [getVoidReturn]
+    ++ [getEndMethod]
 
 getMainMethod :: [Instruction]
 getMainMethod = [getMainMethodHeader]
     ++ [getStackLimit 20]
-	++ [getLocalsLimit 20]
+    ++ [getLocalsLimit 20]
 
 getClassnameDefinitionLine :: ClassName -> Instruction
 getClassnameDefinitionLine className = ".class public " ++ className
