@@ -21,15 +21,17 @@ compile :: Expression -> [Instruction]
 	++ [getEndMethod]
 	-}
 
-{-
-compile (EProgram Program) = getFilePreamble programId
+compile (EProgram prog) = compileProgram prog
+compile (EConstant const) = compileConstant const
+
+-- | Compile a program structure
+compileProgram :: Program -> [Instruction]
+compileProgram (Program programId programExpr programQueries)
+	= getFilePreamble programId
     ++ compile programExpr
 	++ foldr (\query instructionList -> instructionList ++ compile query) [] programQueries
 	++ [getVoidReturn]
 	++ [getEndMethod]
--}
-
-compile (EConstant const) = compileConstant const
 
 -- | Compile a constant
 compileConstant :: Constant -> [Instruction]
@@ -37,6 +39,10 @@ compileConstant (EInt val) = compileInt val
 compileConstant (EFloat val) = compileFloat val
 compileConstant (EBoolean val) = compileBool val
 compileConstant (EPercentage val) = compilePercentage val
+
+-- | Compile an expression type
+compileExpr :: Expr -> [Instruction]
+compileExpr (ExprConstant const) = compileConstant const 
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
