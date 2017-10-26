@@ -14,24 +14,17 @@ type StackLimit = Int
 type LocalVariableLimit = Int
 
 compile :: Expression -> [Instruction]
-{-
- 	compile ast = getFilePreamble "Episcopal"
-    ++ getPrintResultInstructions (ConstantResult (EInt 42))
-    ++ [getVoidReturn]
-	++ [getEndMethod]
-	-}
-
 compile (EProgram prog) = compileProgram prog
 compile (EConstant const) = compileConstant const
 
 -- | Compile a program structure
 compileProgram :: Program -> [Instruction]
 compileProgram (Program programId programExpr programQueries)
-	= getFilePreamble programId
-    ++ compile programExpr
-	++ foldr (\query instructionList -> instructionList ++ compile query) [] programQueries
-	++ [getVoidReturn]
-	++ [getEndMethod]
+    = getFilePreamble programId
+    ++ compileExpr programExpr
+    ++ foldr (\query instructionList -> instructionList ++ compileQuery query) [] programQueries
+    ++ [getVoidReturn]
+    ++ [getEndMethod]
 
 -- | Compile a constant
 compileConstant :: Constant -> [Instruction]
@@ -43,6 +36,11 @@ compileConstant (EPercentage val) = compilePercentage val
 -- | Compile an expression type
 compileExpr :: Expr -> [Instruction]
 compileExpr (ExprConstant const) = compileConstant const 
+
+-- | Compile query
+compileQuery :: Query -> [Instruction]
+compileQuery (Query queryId queryArgs queryExprs)
+    = []
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
