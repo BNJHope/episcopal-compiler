@@ -46,7 +46,7 @@ compileInt val | (val < 128) && (val > -129) = ["bipush " ++ show val]
 
 -- | Compile a float
 compileFloat :: Float -> [Instruction]
-compileFloat val = ["fconst_" ++ show val]
+compileFloat val = ["ldc " ++ show val]
 
 -- | Compile a boolean
 compileBool :: Bool -> [Instruction]
