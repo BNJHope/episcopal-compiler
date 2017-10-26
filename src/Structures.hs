@@ -66,9 +66,9 @@ data Distribution = DistBernoulli Expr
 data Op = ADD
     | MULT
     | SUBTRACT
-	| OVER
-	| OR
-	| AND
-	| GREATER_THAN
-	| LESS_THAN
-	| EQUALS
+    | OVER
+    | OR
+    | AND
+    | GREATER_THAN
+    | LESS_THAN
+    | EQUALS
