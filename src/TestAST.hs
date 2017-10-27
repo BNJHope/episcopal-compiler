@@ -5,7 +5,7 @@ getTestAST
 
 import Structures
 
-getTestAST :: AST
+getTestAST :: Expression
 getTestAST = constant1
 
 constant1 :: Expression
