@@ -9,8 +9,12 @@ Expr(..),
 Args
 ) where
 
-type AST = Expression
+import qualified Data.Map as Map
+
 type ID = String
+type VariableSet = Map ID Expr
+
+type CompileResult = (VariableSet, [Instruction])
 
 data Expression = EExpr Expr
     | EConstant Constant
@@ -38,7 +42,7 @@ data Expr = ExprConstant Constant
     | ExprObserve Expr Expr
     | ExprSample Expr
     | ExprDistrib Distribution
-    | ExprID ID
+    | ExprReference ID
     | ExprFunctionCall ID [Expr]
     | ExprBinOp Expr Op Expr
     | ExprBracketing Expr
