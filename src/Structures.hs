@@ -14,7 +14,7 @@ import qualified Data.Map as Map
 type ID = String
 type VariableSet = Map ID Expr
 
-type CompileResult = (VariableSet, [Instruction])
+type CompileResult = ([Instruction], VariableSet)
 
 data Expression = EExpr Expr
     | EConstant Constant
