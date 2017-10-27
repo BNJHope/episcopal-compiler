@@ -2,6 +2,8 @@ module Compiler
 ( compile
 ) where
 
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Instruction
 import Structures
 import ProgramInfo
@@ -19,16 +21,18 @@ compile (EConstant const) = compileConstant const
 
 -- | Compile a program structure
 compileProgram :: Program -> [Instruction]
-compileProgram (Program programId programExpr programQueries)
-    = getFilePreamble programId
-    ++ compileExpr programExpr
-    ++ foldr (\query instructionList -> instructionList ++ compileQuery query) [] programQueries
+compileProgram prog
+    = getFilePreamble (programId prog)
+    ++ compileExpr (programExpr prog) (Map.fromList [])
+    ++ foldr (\query instructionList -> instructionList ++ compileQuery query) [] (programQueries prog)
     ++ [getVoidReturn]
     ++ [getEndMethod]
 
 -- | Compile an expression type
-compileExpr :: Expr -> [Instruction]
-compileExpr (ExprConstant const) = compileConstant const 
+compileExpr :: Expr -> VariableSet -> CompileResult
+compileExpr (ExprConstant const) vars = (compileConstant const, vars)
+compileExpr (ExprDef defs nextExpr) vars = compileExpr nextExpr newVars 
+    where 
 
 -- | Compile query
 compileQuery :: Query -> [Instruction]
@@ -41,6 +45,14 @@ compileConstant (EInt val) = compileInt val
 compileConstant (EFloat val) = compileFloat val
 compileConstant (EBoolean val) = compileBool val
 compileConstant (EPercentage val) = compilePercentage val
+
+compileDefinition :: Definition -> VariableSet -> CompileResult
+compileDefinition VarDef vars = ([], Map.insert id instrs vars)
+    where id = id var
+          instrs = compileExpr (expr var) vars 
+
+-- compileBinOp :: ExprBinOp -> VariableSet -> [Instruction]
+-- compileBinOp (ADD expr1 expr2) vars = 
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]

@@ -1,19 +1,22 @@
 module Structures(
-AST,
 ID,
+VariableSet,
+CompileResult,
 Program(..),
 Query(..),
 Expression(..),
 Constant(..),
 Expr(..),
+Definition(..),
 Args
 ) where
 
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Instruction
 
 type ID = String
-type VariableSet = Map ID Expr
+type VariableSet = Map ID [Instruction]
 
 type CompileResult = ([Instruction], VariableSet)
 
@@ -45,7 +48,7 @@ data Expr = ExprConstant Constant
     | ExprDistrib Distribution
     | ExprReference ID
     | ExprFunctionCall ID [Expr]
-    | ExprBinOp Expr Op Expr
+    | ExprBinOp Op Expr Expr
     | ExprBracketing Expr
 
 -- | Data type for a constant
@@ -55,7 +58,7 @@ data Constant = EInt Int
     | EPercentage Float
 
 -- | Definition structure
-data Definition = VarDef ID Expr
+data Definition = VarDef {id :: ID, expr :: Expr}
     | FuncDef ID Args [Expr]
     | DistDef ID Args [Expr]
 
