@@ -10,6 +10,7 @@ Args
 ) where
 
 import qualified Data.Map as Map
+import Instruction
 
 type ID = String
 type VariableSet = Map ID Expr
@@ -54,7 +55,8 @@ data Constant = EInt Int
     | EPercentage Float
 
 -- | Definition structure
-data Definition = FuncDef ID Args [Expr]
+data Definition = VarDef ID Expr
+    | FuncDef ID Args [Expr]
     | DistDef ID Args [Expr]
 
 type Args = [ID]
