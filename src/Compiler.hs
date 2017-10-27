@@ -26,13 +26,6 @@ compileProgram (Program programId programExpr programQueries)
     ++ [getVoidReturn]
     ++ [getEndMethod]
 
--- | Compile a constant
-compileConstant :: Constant -> [Instruction]
-compileConstant (EInt val) = compileInt val
-compileConstant (EFloat val) = compileFloat val
-compileConstant (EBoolean val) = compileBool val
-compileConstant (EPercentage val) = compilePercentage val
-
 -- | Compile an expression type
 compileExpr :: Expr -> [Instruction]
 compileExpr (ExprConstant const) = compileConstant const 
@@ -41,6 +34,13 @@ compileExpr (ExprConstant const) = compileConstant const
 compileQuery :: Query -> [Instruction]
 compileQuery (Query queryId queryArgs queryExprs)
     = []
+
+-- | Compile a constant
+compileConstant :: Constant -> [Instruction]
+compileConstant (EInt val) = compileInt val
+compileConstant (EFloat val) = compileFloat val
+compileConstant (EBoolean val) = compileBool val
+compileConstant (EPercentage val) = compilePercentage val
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
