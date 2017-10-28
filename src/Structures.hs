@@ -8,7 +8,7 @@ Expression(..),
 Constant(..),
 Expr(..),
 Definition(..),
-Args
+Arg
 ) where
 
 import Data.Map (Map)
@@ -17,14 +17,15 @@ import Instruction
 
 type ID = String
 type VariableSet = Map ID [Instruction]
+type FunctionResult = [Instruction]
 
-type CompileResult = ([Instruction], VariableSet)
+-- type CompileResult = ([Instruction], VariableSet)
 
 data Expression = EExpr Expr
     | EConstant Constant
     | EProgram Program
     | EQuery Query
-    | EArgs Args
+    | EArgs [Arg]
 
 -- | Program Structure
 data Program = Program {
@@ -36,7 +37,7 @@ data Program = Program {
 -- | Query Structure
 data Query = Query {
     queryId :: ID,
-    queryArgs :: Args,
+    queryArgs :: [Args],
     queryExprs :: [Expr]
 }
 
@@ -59,10 +60,10 @@ data Constant = EInt Int
 
 -- | Definition structure
 data Definition = VarDef {id :: ID, expr :: Expr}
-    | FuncDef ID Args [Expr]
-    | DistDef ID Args [Expr]
+    | FuncDef ID [Arg] [Expr]
+    | DistDef ID [Arg] [Expr]
 
-type Args = [ID]
+type Arg = ID
 
 -- | Set of distributions
 data Distribution = DistBernoulli Expr
