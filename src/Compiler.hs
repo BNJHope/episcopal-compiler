@@ -22,22 +22,34 @@ compile (EConstant const) = compileConstant const
 -- | Compile a program structure
 compileProgram :: Program -> [Instruction]
 compileProgram prog
-    = getFilePreamble (programId prog)
-    ++ compileExpr (programExpr prog) (Map.fromList [])
-    ++ foldr (\query instructionList -> instructionList ++ compileQuery query) [] (programQueries prog)
-    ++ [getVoidReturn]
-    ++ [getEndMethod]
+    = getClassPreamble (programId prog)
+    ++ compileFunctionSet (programExpr prog) (programQueries prog) (Map.fromList [("__classname__", programId)])
+
+-- | Compiles the set of functions kept by the class
+compileFunctionSet :: Expr -> [Query] -> VariableSet -> [FunctionResult]
+compileFunctionSet expr [] vars =
+    -- Main method from initial expression
+    -- Remaining functions from the queries
+    -- compileExpr (programExpr prog)
+compileFunctionSet expr queries vars = 
 
 -- | Compile an expression type
-compileExpr :: Expr -> VariableSet -> CompileResult
-compileExpr (ExprConstant const) vars = (compileConstant const, vars)
-compileExpr (ExprDef defs nextExpr) vars = compileExpr nextExpr newVars 
-    where 
+compileExpr :: Expr -> VariableSet -> [FunctionResult]
+compileExpr (ExprConstant const) vars = [(compileConstant const, vars)]
+compileExpr (ExprDef defs nextExpr) vars =
+    let (newVars, newFuncs) = compileDefinitions defs vars
+    in (compileExpr nextExpr newVars) ++ newFuncs
+compileExpr (ExprReference id) vars = [vars ! id]
+compileExpr (ExprFunctionCall id exprs) vars = [compileMethodCall id exprs vars]
 
 -- | Compile query
 compileQuery :: Query -> [Instruction]
 compileQuery (Query queryId queryArgs queryExprs)
-    = []
+    = compileMethod queryId queryArgs queryExprs
+
+-- | Compile the instructions for when another method is called.
+compileMethodCall :: ID -> [Expr] -> VariableSet -> [Instruction]
+compileMethodCall methodId exprs vars = ++ 
 
 -- | Compile a constant
 compileConstant :: Constant -> [Instruction]
@@ -46,13 +58,28 @@ compileConstant (EFloat val) = compileFloat val
 compileConstant (EBoolean val) = compileBool val
 compileConstant (EPercentage val) = compilePercentage val
 
+-- | Compile a set of variable and function definitions.
+compileDefinitions :: [Definition] 
 compileDefinition :: Definition -> VariableSet -> CompileResult
 compileDefinition VarDef vars = ([], Map.insert id instrs vars)
     where id = id var
-          instrs = compileExpr (expr var) vars 
+          instrs = compileExpr (expr var) vars
 
 -- compileBinOp :: ExprBinOp -> VariableSet -> [Instruction]
 -- compileBinOp (ADD expr1 expr2) vars = 
+
+-- | Compile a method
+compileMethod :: ID -> [Arg] -> [Expr] -> [FunctionResult]
+compileMethod id args exprs =
+    -- Get method header
+    getMethodHeader id args
+    -- Create variable set from the arguments
+
+-- | Get the header of a method.
+getMethodHeader :: ID -> [Arg] -> Instruction
+getMethodHeader id args = ".method public static " + id + "(" + argsSymbs ")" + returnSymb
+    where argsSymbs = getArgsSymbs args
+        returnSymb = getReturnSymb
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
@@ -113,15 +140,27 @@ invokeObjectInit = "invokenonvirtual java/lang/Object/<init>()V"
 getMainMethodHeader :: Instruction
 getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"
 
+-- | Get the symbol representation of all of the arguments in a method call.
+getArgsSymbs :: [Arg] -> Instruction
+getArgsSymbs args = foldr (\arg symbs-> symbs ++ getArgSymb arg) [] args
+
+-- Get the symbol representation of an argument in a method call.
+getArgSymb :: Arg -> VariableSet -> Instruction
+getArgsSymb args vars
+
+-- | Get the limit of the size of the stack
 getStackLimit :: StackLimit -> Instruction
 getStackLimit lim = ".limit stack " ++ show lim
 
+-- | Get the limit of local variables for a method.
 getLocalsLimit :: LocalVariableLimit -> Instruction
 getLocalsLimit lim = ".limit locals " ++ show lim
 
+-- | Return on void.
 getVoidReturn :: Instruction
 getVoidReturn = "return"
 
+-- | Determines the end of a method definition
 getEndMethod :: Instruction
 getEndMethod = ".end method"
 
