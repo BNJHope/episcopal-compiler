@@ -19,7 +19,7 @@ type ID = String
 type VariableSet = Map ID [Instruction]
 type FunctionResult = [Instruction]
 
--- type CompileResult = ([Instruction], VariableSet)
+type CompileResult = ([FunctionResult], VariableSet)
 
 data Expression = EExpr Expr
     | EConstant Constant
