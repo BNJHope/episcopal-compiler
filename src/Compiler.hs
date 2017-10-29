@@ -23,27 +23,56 @@ compile (EConstant const) = compileConstant const
 compileProgram :: Program -> [Instruction]
 compileProgram prog
     = getClassPreamble (programId prog)
-    ++ compileFunctionSet (programExpr prog) (programQueries prog) (Map.fromList [("__classname__", programId)])
+    ++ getInitMethod
+    ++ foldr (\func programInstrs -> programInstrs ++ func) [] funcs
+    where funcs = 
+        compileFunctionSet (programExpr prog) (programQueries prog) env
+        env = (Map.fromList [("__classname__", programId prog)])
 
 -- | Compiles the set of functions kept by the class
 compileFunctionSet :: Expr -> [Query] -> VariableSet -> [FunctionResult]
 compileFunctionSet expr [] vars =
+    -- When there are no queries, only compile the main method.
+	-- compileMethod "main" [] [expr]
+    compileMainMethod [expr] vars
+
+compileFunctionSet expr queries vars =
     -- Main method from initial expression
-	compileMethod "main" [] [expr]
+    compileMainMethod [expr]
+	-- compileMethod "main" [] [expr]
+	++ map compileMethod() queries
     -- Remaining functions from the queries
     -- compileExpr (programExpr prog)
-compileFunctionSet expr queries vars =
-	compileMethod "main" [] [expr]
-	++ map compileMethod() queries
+
+-- | Compile a method and return a list of functions
+-- | where the first function is the method that has been
+-- | compiled and the rest are methods defined within the
+-- | method.
+compileMethod :: ID -> [Arg] -> [Expr] -> [FunctionResult]
+compileMethod id args exprs =
+    -- Get method header
+    [getMethodHeader id args
+    ++ head exprsResult
+    ++ getFloatReturn]
+    ++ tail exprsResult
+    where exprsResult = compileExprs varSet
+        varSet = createVarSet args
+
+compileMainMethod :: [Expr] -> VariableSet -> [FunctionResult]
+compileMethod exprs vars =
+    [[getMainMethodHeader] ++ head methodBody] ++ tail methodBody
+    where
+        methodBody = foldr (\expr funcsSet -> [head funcsSet ++ head result] ++ tail funcsSet ++ tail result
+            where result = compileExpr expr vars) [] exprs
 
 -- | Compile an expression type
-compileExpr :: Expr -> VariableSet -> [FunctionResult]
-compileExpr (ExprConstant const) vars = [(compileConstant const, vars)]
+compileExpr :: Expr -> VariableSet -> CompileResult
+compileExpr (ExprConstant const) vars = (compileConstant const, vars)
 compileExpr (ExprDef defs nextExpr) vars =
-    let (newVars, newFuncs) = compileDefinitions defs vars
-    in (compileExpr nextExpr newVars) ++ newFuncs
-compileExpr (ExprReference id) vars = [vars ! id]
-compileExpr (ExprFunctionCall id exprs) vars = [compileMethodCall id exprs vars]
+    let (newFuncs, newVars) = compileDefinitions defs vars
+    in ((compileExpr nextExpr newVars) ++ newFuncs, vars)
+compileExpr (ExprReference id) vars = (vars ! id, vars)
+compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], vars)
 
 -- | Compile query
 compileQuery :: Query -> [Instruction]
@@ -61,22 +90,18 @@ compileConstant (EFloat val) = compileFloat val
 compileConstant (EBoolean val) = compileBool val
 compileConstant (EPercentage val) = compilePercentage val
 
+-- | Compile a set of definitions.
+compileDefinitions :: [Definitions] -> VariableSet -> CompileResult
+
+
 -- | Compile a set of variable and function definitions.
-compileDefinitions :: [Definition] 
 compileDefinition :: Definition -> VariableSet -> CompileResult
-compileDefinition VarDef vars = ([], Map.insert id instrs vars)
+compileDefinition VarDef vars = (tail instrs, Map.insert id (head instrs) vars)
     where id = id var
           instrs = compileExpr (expr var) vars
 
 -- compileBinOp :: ExprBinOp -> VariableSet -> [Instruction]
 -- compileBinOp (ADD expr1 expr2) vars = 
-
--- | Compile a method
-compileMethod :: ID -> [Arg] -> [Expr] -> [FunctionResult]
-compileMethod id args exprs =
-    -- Get method header
-    getMethodHeader id args
-    -- Create variable set from the arguments
 
 -- | Get the header of a method.
 getMethodHeader :: ID -> [Arg] -> Instruction
@@ -86,9 +111,10 @@ getMethodHeader id args = ".method public static " + id + "(" + argsSymbs ")" + 
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
-compileInt val | (val < 128) && (val > -129) = ["bipush " ++ show val]
+compileInt val = ["ldc " ++ show val]
+{-compileInt val | (val < 128) && (val > -129) = ["bipush " ++ show val]
     | (val < 32768) && (val > -32769) = ["sipush " ++ show val]
-    | otherwise = ["ldc " ++ show val]
+    | otherwise = ["ldc " ++ show val]-}
 
 -- | Compile a float
 compileFloat :: Float -> [Instruction]
@@ -96,21 +122,16 @@ compileFloat val = ["ldc " ++ show val]
 
 -- | Compile a boolean
 compileBool :: Bool -> [Instruction]
-compileBool False = ["bipush " ++ show 0]
-compileBool True = ["bipush " ++ show 1]
+compileBool False = ["ldc " ++ show 0]
+compileBool True = ["ldc " ++ show 1]
 
 -- | Compile a percentage value
 compilePercentage :: Float -> [Instruction]
-compilePercentage val = ["fconst_" ++ show val]
+compilePercentage val = ["ldc " ++ show val]
 
 -- | Load the variable at the given address onto the stack
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
 loadAddressFromVariableOntoStack address = "aload_" ++ show address
-
-getFilePreamble :: ClassName -> [Instruction]
-getFilePreamble className = getClassPreamble className
-    ++ getInitMethod
-    ++ getMainMethod
 
 getClassPreamble :: ClassName -> [Instruction]
 getClassPreamble className = [getClassnameDefinitionLine className]
@@ -147,9 +168,12 @@ getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"
 getArgsSymbs :: [Arg] -> Instruction
 getArgsSymbs args = foldr (\arg symbs-> symbs ++ getArgSymb arg) [] args
 
+getReturnSymb :: Instruction
+getReturnSymb = "F"
+
 -- Get the symbol representation of an argument in a method call.
-getArgSymb :: Arg -> VariableSet -> Instruction
-getArgsSymb args vars
+getArgSymb :: Arg -> Instruction
+getArgSymb arg var = "F"
 
 -- | Get the limit of the size of the stack
 getStackLimit :: StackLimit -> Instruction
@@ -163,8 +187,10 @@ getLocalsLimit lim = ".limit locals " ++ show lim
 getVoidReturn :: Instruction
 getVoidReturn = "return"
 
+-- | Return a float.
+getFloatReturn :: Instruction
+getFloatReturn = "freturn"
+
 -- | Determines the end of a method definition
 getEndMethod :: Instruction
 getEndMethod = ".end method"
-
-
