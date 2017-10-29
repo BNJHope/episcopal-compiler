@@ -29,9 +29,12 @@ compileProgram prog
 compileFunctionSet :: Expr -> [Query] -> VariableSet -> [FunctionResult]
 compileFunctionSet expr [] vars =
     -- Main method from initial expression
+	compileMethod "main" [] [expr]
     -- Remaining functions from the queries
     -- compileExpr (programExpr prog)
-compileFunctionSet expr queries vars = 
+compileFunctionSet expr queries vars =
+	compileMethod "main" [] [expr]
+	++ map compileMethod() queries
 
 -- | Compile an expression type
 compileExpr :: Expr -> VariableSet -> [FunctionResult]
