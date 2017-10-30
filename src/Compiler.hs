@@ -33,16 +33,12 @@ compileProgram prog
 compileFunctionSet :: Expr -> [Query] -> VariableSet -> [FunctionResult]
 compileFunctionSet expr [] vars =
     -- When there are no queries, only compile the main method.
-	-- compileMethod "main" [] [expr]
     compileMainMethod [expr] vars
-
 compileFunctionSet expr queries vars =
     -- Main method from initial expression
     compileMainMethod [expr]
-	-- compileMethod "main" [] [expr]
-	++ map compileMethod() queries
     -- Remaining functions from the queries
-    -- compileExpr (programExpr prog)
+	++ foldr (\query funcs -> funcs ++ (compileMethod (queryId query) (queryArgs query) (queryExprs))) [] queries
 
 -- | Compile a method and return a list of functions
 -- | where the first function is the method that has been
@@ -60,11 +56,15 @@ compileMethod id args exprs =
 
 compileMainMethod :: [Expr] -> VariableSet -> [FunctionResult]
 compileMethod exprs vars =
-    [[getMainMethodHeader] ++ head methodBody] ++ tail methodBody
+    [[getMainMethodHeader]
+	++ getStackLimit 20
+	++ getLocalsLimit 20
+	++ head methodBody]
+	++ tail methodBody
     where
         methodBody = foldr (\expr funcsSet -> [head funcsSet ++ head result] ++ tail funcsSet ++ tail result
-            where result = compileExpr expr vars) [] exprs
-
+			where result = compileExpr expr vars) [] exprs
+		
 -- | Compile an expression type
 compileExpr :: Expr -> VariableSet -> CompileResult
 compileExpr (ExprConstant const) vars = (compileConstant const, vars)
