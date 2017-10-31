@@ -1,6 +1,7 @@
 module Structures(
 ID,
 VariableSet,
+FunctionResult,
 CompileResult,
 Program(..),
 Query(..),
@@ -8,7 +9,9 @@ Expression(..),
 Constant(..),
 Expr(..),
 Definition(..),
-Arg
+Arg,
+BinOp(..),
+Op(..)
 ) where
 
 import Data.Map (Map)
@@ -37,7 +40,7 @@ data Program = Program {
 -- | Query Structure
 data Query = Query {
     queryId :: ID,
-    queryArgs :: [Args],
+    queryArgs :: [Arg],
     queryExprs :: [Expr]
 }
 
@@ -49,7 +52,7 @@ data Expr = ExprConstant Constant
     | ExprDistrib Distribution
     | ExprReference ID
     | ExprFunctionCall ID [Expr]
-    | ExprBinOp Op Expr Expr
+    | ExprBinOp BinOp
     | ExprBracketing Expr
 
 -- | Data type for a constant
@@ -59,7 +62,7 @@ data Constant = EInt Int
     | EPercentage Float
 
 -- | Definition structure
-data Definition = VarDef {id :: ID, expr :: Expr}
+data Definition = VarDef {varId :: ID, expr :: Expr}
     | FuncDef ID [Arg] [Expr]
     | DistDef ID [Arg] [Expr]
 
@@ -71,6 +74,12 @@ data Distribution = DistBernoulli Expr
     | DistNormal Expr Expr
     | DistFlip Expr
     | DistUserDefined [Expr]
+
+data BinOp = BinOp {
+    op :: Op,
+    expr1 :: Expr,
+    expr2 :: Expr
+}
 
 -- | Set of binary operations.
 data Op = ADD

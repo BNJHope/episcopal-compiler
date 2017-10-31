@@ -25,9 +25,7 @@ compileProgram prog
     = getClassPreamble (programId prog)
     ++ getInitMethod
     ++ foldr (\func programInstrs -> programInstrs ++ func) [] funcs
-    where funcs = 
-        compileFunctionSet (programExpr prog) (programQueries prog) env
-        env = (Map.fromList [("__classname__", programId prog)])
+    where funcs = compileFunctionSet (programExpr prog) (programQueries prog) (Map.fromList [("__classname__", [programId prog])])
 
 -- | Compiles the set of functions kept by the class
 compileFunctionSet :: Expr -> [Query] -> VariableSet -> [FunctionResult]
@@ -38,7 +36,7 @@ compileFunctionSet expr queries vars =
     -- Main method from initial expression
     compileMainMethod [expr] vars
     -- Remaining functions from the queries
-	++ foldr (\query funcs -> funcs ++ (compileMethod (queryId query) (queryArgs query) (queryExprs query))) [] queries
+    ++ foldr (\query funcs -> funcs ++ (compileMethod (queryId query) (queryArgs query) (queryExprs query))) [] queries
 
 -- | Compile a method and return a list of functions
 -- | where the first function is the method that has been
@@ -47,60 +45,61 @@ compileFunctionSet expr queries vars =
 compileMethod :: ID -> [Arg] -> [Expr] -> [FunctionResult]
 compileMethod id args exprs =
     -- Get method header
-    [getMethodHeader id arg
-	++ getStackLimit 20
-	++ getLocalsLimit 20
+    [[getMethodHeader id args]
+    ++ [getStackLimit 20]
+    ++ [getLocalsLimit 20]
     ++ compiledExpr
-    ++ getFloatReturn]
+    ++ [getFloatReturn]]
     ++ otherFuncs
-    where ((compiledExpr:otherFuncs), _) = compileExprs exprs newVars
-        newVars = createVarSet args
+    where ((compiledExpr:otherFuncs), _) = compileExprs exprs $ createVarSet args 0
 
 compileMainMethod :: [Expr] -> VariableSet -> [FunctionResult]
 compileMainMethod exprs vars =
     [[getMainMethodHeader]
-	++ getStackLimit 20
-	++ getLocalsLimit 20
-	++ mainFunc]
-	++ otherFuncs
+    ++ [getStackLimit 20]
+    ++ [getLocalsLimit 20]
+    ++ mainFunc]
+    ++ otherFuncs
     where
-        ((mainFunc:otherFuncs), _) = foldr compileExprFoldable [] exprs
-		
-compileExprs :: [Expr] -> VariableSet -> CompileResult
-compileExpr exprs vars = foldr compileExprFoldable [] exprs
+        ((mainFunc:otherFuncs), _) = foldr compileExprFoldable ([], Map.empty) exprs
 
-compileExprFoldable :: Expr -> VariableSet -> CompileResult -> CompileResult
-compileExprFoldable expr vars ([topFunc:otherFuncs], varsSoFar) =
-	([[topFunc ++ newTopFuncInstrs] ++ otherFuncs ++ newOtherFuncs], combineVars varsSoFar newVars)
-	where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
+compileExprs :: [Expr] -> VariableSet -> CompileResult
+compileExprs exprs vars = foldr compileExprFoldable ([], Map.empty) exprs
+
+compileExprFoldable :: Expr -> CompileResult -> CompileResult
+compileExprFoldable expr ([topFunc:otherFuncs], vars) =
+    ([[topFunc ++ newTopFuncInstrs] ++ otherFuncs ++ newOtherFuncs], combineVars vars newVars)
+    where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
 
 -- | Compile an expression type
 compileExpr :: Expr -> VariableSet -> CompileResult
-compileExpr (ExprConstant const) vars = (compileConstant const, vars)
+compileExpr (ExprConstant const) vars = ([compileConstant const], vars)
 compileExpr (ExprDef defs nextExpr) vars =
     let (newFuncs, newVars) = compileDefinitions defs vars
-    in ((compileExpr nextExpr newVars) ++ newFuncs, vars)
-compileExpr (ExprReference id) vars = (vars ! id, vars)
+        ((restOfExpression:extraFunctions), _) = compileExpr nextExpr newVars
+    in ([restOfExpression] ++ newFuncs ++ extraFunctions, vars)
+compileExpr (ExprReference id) vars = ([vars Map.! id], vars)
 compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], vars)
-compileExpr (ExprBinOp op expr1 expr2) vars = (compileBinOp op expr1 expr2 vars, vars)
-compileExpr (ExprBracketing expr) = compileExpr expr
+compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
+compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 
 -- | Compile query
-compileQuery :: Query -> [Instruction]
+compileQuery :: Query -> [FunctionResult]
 compileQuery (Query queryId queryArgs queryExprs)
     = compileMethod queryId queryArgs queryExprs
 
 -- | Compile the instructions for when another method is called.
 compileMethodCall :: ID -> [Expr] -> VariableSet -> [Instruction]
 compileMethodCall methodId exprs vars = [
-		-- Compile set of expressions before function call
-		-- to load everything onto the stack
-		-- foldr (\expr instrs -> instrs ++ f)
-		"invokestatic "
-		++ (vars ! "__classname__")
-		++ "/(" ++ methodId
-		++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
-		++ ")" + "F" ]
+        -- Compile set of expressions before function call
+        -- to load everything onto the stack
+        -- foldr (\expr instrs -> instrs ++ f)
+        "invokestatic "
+        ++ classname
+        ++ "/(" ++ methodId
+        ++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
+        ++ ")" ++ "F" ]
+        where (classname:_) = vars Map.! "__classname__"
 
 -- | Compile a constant
 compileConstant :: Constant -> [Instruction]
@@ -110,31 +109,31 @@ compileConstant (EBoolean val) = compileBool val
 compileConstant (EPercentage val) = compilePercentage val
 
 -- | Compile a set of definitions.
-compileDefinitions :: [Definitions] -> VariableSet -> CompileResult
--- Iterate over the definitions and merge new functions in first tuple segment and
--- merge variables in the second tuple segment
--- compileDefinitions defs vars = foldr (\def compResult -> (fst compResult ++ fst result, )
---		where ) [] defs
+compileDefinitions :: [Definition] -> VariableSet -> CompileResult
+compileDefinitions defs vars = foldr (compileDefsFoldable vars) ([], Map.empty) defs
+
+compileDefsFoldable :: VariableSet -> Definition -> CompileResult -> CompileResult
+compileDefsFoldable vars def ((mainFunc:extraFuncs), resVariableSet)
+    = ([mainFunc ++ newFunc] ++ extraFuncs ++ extraNewFuncs, combineVars resVariableSet newVars)
+    where ((newFunc:extraNewFuncs), newVars) = compileDefinition def vars
 
 -- | Compile a set of variable and function definitions.
 compileDefinition :: Definition -> VariableSet -> CompileResult
-compileDefinition (VarDef var) vars = ([] ++ extraFuncs, Map.insert id definition newVars)
-    where id = id var
-          ((definition:extraFuncs) , newVars) = compileExpr (expr var) vars
+compileDefinition (VarDef varId varExpr) vars = ([] ++ extraFuncs, Map.insert varId definition newVars)
+    where ((definition:extraFuncs) , newVars) = compileExpr varExpr vars
 
-compileDefinitions (FuncDef id args exprs) vars = (funcDef ++ extraFuncs, vars)
-	where ((funcDef:extraFuncs), newVars) = compileMethod id args exprs ID
+compileDefinition (FuncDef id args exprs) vars = (funcs, vars)
+    where funcs = compileMethod id args exprs
 
-compileBinOp :: ExprBinOp -> VariableSet -> CompileResult
-compileBinOp (ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, vars)
-	where ((expr1Result:expr1ExtraFuncs), expr1NewVars) = compileExpr expr1 vars
-		((expr2Result:expr2ExtraFuncs), expr2NewVars) = compileExpr expr2 vars
+compileBinOp :: BinOp -> VariableSet -> CompileResult
+compileBinOp (BinOp ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, vars)
+    where ((expr1Result:expr1ExtraFuncs), expr1NewVars) = compileExpr expr1 vars
+          ((expr2Result:expr2ExtraFuncs), expr2NewVars) = compileExpr expr2 vars
  
 -- | Get the header of a method.
 getMethodHeader :: ID -> [Arg] -> Instruction
-getMethodHeader id args = ".method public static " + id + "(" + argsSymbs ")" + returnSymb
+getMethodHeader id args = ".method public static " ++ id ++ "(" ++ argsSymbs ++ ")" ++ getReturnSymb
     where argsSymbs = getArgsSymbs args
-        returnSymb = getReturnSymb
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
@@ -155,6 +154,18 @@ compileBool True = ["ldc " ++ show 1]
 -- | Compile a percentage value
 compilePercentage :: Float -> [Instruction]
 compilePercentage val = ["ldc " ++ show val]
+
+createVarSet :: [Arg] -> Int -> VariableSet
+createVarSet [] _ = Map.empty
+createVarSet (nextArg:remainingArgs) argIndex =
+    Map.insert nextArg [(getArgumentLoadInstruction argIndex)] nextVarSet
+    where nextVarSet = createVarSet remainingArgs (argIndex + 1)
+
+combineVars :: VariableSet -> VariableSet -> VariableSet
+combineVars vars1 vars2 = Map.union vars1 vars2
+
+getArgumentLoadInstruction :: Int -> Instruction
+getArgumentLoadInstruction index = "fload " ++ show index
 
 -- | Load the variable at the given address onto the stack
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
@@ -191,11 +202,11 @@ getArgsSymbs :: [Arg] -> Instruction
 getArgsSymbs args = foldr (\arg symbs-> symbs ++ getArgSymb arg) [] args
 
 getReturnSymb :: Instruction
-getReturnSymb = "F"
+getReturnSymb = ['F']
 
 -- Get the symbol representation of an argument in a method call.
 getArgSymb :: Arg -> Instruction
-getArgSymb arg var = "F"
+getArgSymb arg = ['F']
 
 -- | Get the limit of the size of the stack
 getStackLimit :: StackLimit -> Instruction
