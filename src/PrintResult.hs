@@ -1,5 +1,6 @@
 module PrintResult (
-getPrintResultInstructions
+getPrintResultInstructions,
+printFloat
 ) where
 
 import Structures
@@ -11,6 +12,11 @@ getPrintResultInstructions (ConstantResult res) = [importPrintStreamInstruction]
     ++ [loadConstantOntoStack res]
     ++ [convertConstantToString res]
     ++ [invokePrint]
+
+printFloat :: [Instruction]
+printFloat = [importPrintStreamInstruction]
+        ++ [convertFloatToString]
+        ++ [invokePrint]
 
 importPrintStreamInstruction :: Instruction
 importPrintStreamInstruction = "getstatic java/lang/System/out Ljava/io/PrintStream;"
@@ -25,6 +31,9 @@ loadConstantOntoStack (EFloat float) = "ldc " ++ show float
 convertConsantToString :: Constant -> Instruction
 convertConsantToString (EInt val) = "invokestatic java/lang/String/valueOf(I)Ljava/lang/String;"
 convertConstantToString (EFloat val) = "invokestatic java/lang/String/valueOf(F)Ljava/lang/String;"
+
+convertFloatToString :: Instruction
+convertFloatToString = "invokestatic java/lang/String/valueOf(F)Ljava/lang/String;"
 
 invokePrint :: Instruction
 invokePrint = "invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V"

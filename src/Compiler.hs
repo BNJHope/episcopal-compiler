@@ -58,7 +58,8 @@ compileMainMethod exprs vars =
     [[getMainMethodHeader]
     ++ [getStackLimit 20]
     ++ [getLocalsLimit 20]
-    ++ mainFunc]
+    ++ mainFunc
+    ++ printFloat]
     ++ otherFuncs
     where
         ((mainFunc:otherFuncs), _) = foldr compileExprFoldable ([], Map.empty) exprs
