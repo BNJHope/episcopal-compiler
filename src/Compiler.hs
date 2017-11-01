@@ -63,6 +63,7 @@ compileMainMethod exprs vars =
     [[getMainMethodHeader]
     ++ [getStackLimit 20]
     ++ [getLocalsLimit 20]
+    ++ [importPrintStreamInstruction]
     ++ mainFunc
     ++ printFloat
     ++ [getVoidReturn]
@@ -115,16 +116,22 @@ compileQuery (Query queryId queryArgs queryExprs) vars
 
 -- | Compile the instructions for when another method is called.
 compileMethodCall :: ID -> [Expr] -> VariableSet -> [Instruction]
-compileMethodCall methodId exprs vars = [
+compileMethodCall methodId exprs vars = 
+        combineFuncs(take (length exprs) compiledExprs)
+        ++ [
         -- Compile set of expressions before function call
         -- to load everything onto the stack
         -- foldr (\expr instrs -> instrs ++ f)
         "invokestatic "
         ++ classname
-        ++ "/(" ++ methodId
-        ++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
+        ++ "/" ++ methodId
+        ++ "(" ++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
         ++ ")" ++ "F" ]
         where (classname:_) = vars Map.! "__classname__"
+              (compiledExprs, newVars) = compileExprs exprs vars
+
+combineFuncs :: [FunctionResult] -> [Instruction]
+combineFuncs funcs = foldr (\func instrsList -> instrsList ++ func) [] funcs
 
 -- | Compile a constant
 compileConstant :: Constant -> [Instruction]
@@ -165,7 +172,7 @@ getMethodHeader id args = ".method public static " ++ id ++ "(" ++ argsSymbs ++ 
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
-compileInt val = ["ldc " ++ show val]
+compileInt val = ["ldc " ++ show val] ++ ["i2f"]
 {-compileInt val | (val < 128) && (val > -129) = ["bipush " ++ show val]
     | (val < 32768) && (val > -32769) = ["sipush " ++ show val]
     | otherwise = ["ldc " ++ show val]-}

@@ -1,6 +1,7 @@
 module PrintResult (
 getPrintResultInstructions,
-printFloat
+printFloat,
+importPrintStreamInstruction
 ) where
 
 import Structures
@@ -14,8 +15,7 @@ getPrintResultInstructions (ConstantResult res) = [importPrintStreamInstruction]
     ++ [invokePrint]
 
 printFloat :: [Instruction]
-printFloat = [importPrintStreamInstruction]
-        ++ [convertFloatToString]
+printFloat = [convertFloatToString]
         ++ [invokePrint]
 
 importPrintStreamInstruction :: Instruction
