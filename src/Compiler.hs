@@ -54,7 +54,8 @@ compileMethod id args exprs vars =
     ++ [getLocalsLimit 20]
     ++ compiledExpr
     ++ [getFloatReturn]
-    ++ [getEndMethod]]
+    ++ [getEndMethod]
+    ++ [getNewLine]]
     ++ otherFuncs
     where ((compiledExpr:otherFuncs), _) = compileExprs exprs $ combineVars (createVarSet args 0) vars
 
@@ -67,7 +68,8 @@ compileMainMethod exprs vars =
     ++ mainFunc
     ++ printFloat
     ++ [getVoidReturn]
-    ++ [getEndMethod]]
+    ++ [getEndMethod]
+    ++ [getNewLine]]
     ++ otherFuncs
     where
         ((mainFunc:otherFuncs), _) = compileExprs exprs vars
@@ -216,6 +218,7 @@ getInitMethod = [getInitMethodHeader]
     ++ [invokeObjectInit]
     ++ [getVoidReturn]
     ++ [getEndMethod]
+    ++ [getNewLine]
 
 getClassnameDefinitionLine :: ClassName -> Instruction
 getClassnameDefinitionLine className = ".class public " ++ className

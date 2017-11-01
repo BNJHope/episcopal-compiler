@@ -1,7 +1,9 @@
 module PrintResult (
 getPrintResultInstructions,
 printFloat,
-importPrintStreamInstruction
+importPrintStreamInstruction,
+getNewLine,
+getComment
 ) where
 
 import Structures
@@ -20,6 +22,12 @@ printFloat = [convertFloatToString]
 
 importPrintStreamInstruction :: Instruction
 importPrintStreamInstruction = "getstatic java/lang/System/out Ljava/io/PrintStream;"
+
+getNewLine :: Instruction
+getNewLine = "\n"
+
+getComment :: Instruction -> Instruction
+getComment comm = ";; " ++ comm
 
 loadConstantOntoStack :: Constant -> Instruction
 loadConstantOntoStack (EInt int) | (int < 128) && (int > -129) = "bipush " ++ show int
