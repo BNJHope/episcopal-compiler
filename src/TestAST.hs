@@ -1,12 +1,30 @@
 module TestAST
 (
-getTestAST
+getTestASTs
 ) where
 
 import Structures
 
-getTestAST :: Expression
-getTestAST = constant1
+getTestASTs :: [Program]
+getTestASTs = [getTestAST1, getTestAST2]
 
-constant1 :: Expression
-constant1 = EExpr $ ExprConstant $ EInt 42
+getTestAST1 :: Program
+getTestAST1 = Program "TestConst" constant1 []
+
+getTestAST2 :: Program
+getTestAST2 = Program "TestFunc" func1 []
+
+func1 :: Expr
+func1 = ExprDef [funcDefSum] funcCallSum
+
+funcDefSum :: Definition
+funcDefSum = (FuncDef "sum" ["x", "y"] [addXY])
+
+addXY :: Expr
+addXY = ExprBinOp $ BinOp ADD (ExprReference "x") (ExprReference "y")
+
+funcCallSum :: Expr
+funcCallSum = ExprFunctionCall "sum" [constant1, constant1]
+
+constant1 :: Expr
+constant1 = ExprConstant $ EInt 42

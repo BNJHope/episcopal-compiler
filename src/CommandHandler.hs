@@ -9,11 +9,17 @@ import ClassFileWriter
 import ProgramInfo
 import TestAST
 import Data.List
+import Structures
 
 -- Handle the program input.
 handleInput :: IO()
 handleInput = do
-    writeInstructionsToFile "episcopal.out" $ compile $ getTestAST
+    mapM_ (\ast ->
+        writeInstructionsToFile (getFilenameFromProgramStructure ast) $ compile ast) getTestASTs
+    -- writeInstructionsToFile "episcopal.out" $ compile $ head $ getTestASTs
+
+getFilenameFromProgramStructure :: Program -> String
+getFilenameFromProgramStructure prog = "output_progs/" ++ (programId prog) ++ ".epscpl"
 
 -- | Get the program info structure from the set of arguments.
 getProgramInfo :: [String] -> ProgramInfo

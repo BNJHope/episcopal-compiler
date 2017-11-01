@@ -1,5 +1,6 @@
 module Compiler
-( compile
+( compile,
+    compileExprFoldable
 ) where
 
 import Data.Map (Map)
@@ -15,13 +16,15 @@ type VariableAddress = Int
 type StackLimit = Int
 type LocalVariableLimit = Int
 
+{-
 compile :: Expression -> [Instruction]
 compile (EProgram prog) = compileProgram prog
 compile (EConstant const) = compileConstant const
+-}
 
 -- | Compile a program structure
-compileProgram :: Program -> [Instruction]
-compileProgram prog
+compile :: Program -> [Instruction]
+compile prog
     = getClassPreamble (programId prog)
     ++ getInitMethod
     ++ foldr (\func programInstrs -> programInstrs ++ func) [] funcs
@@ -49,7 +52,8 @@ compileMethod id args exprs =
     ++ [getStackLimit 20]
     ++ [getLocalsLimit 20]
     ++ compiledExpr
-    ++ [getFloatReturn]]
+    ++ [getFloatReturn]
+    ++ [getEndMethod]]
     ++ otherFuncs
     where ((compiledExpr:otherFuncs), _) = compileExprs exprs $ createVarSet args 0
 
@@ -59,7 +63,9 @@ compileMainMethod exprs vars =
     ++ [getStackLimit 20]
     ++ [getLocalsLimit 20]
     ++ mainFunc
-    ++ printFloat]
+    ++ printFloat
+    ++ [getVoidReturn]
+    ++ [getEndMethod]]
     ++ otherFuncs
     where
         ((mainFunc:otherFuncs), _) = foldr compileExprFoldable ([], Map.empty) exprs
@@ -68,6 +74,10 @@ compileExprs :: [Expr] -> VariableSet -> CompileResult
 compileExprs exprs vars = foldr compileExprFoldable ([], Map.empty) exprs
 
 compileExprFoldable :: Expr -> CompileResult -> CompileResult
+compileExprFoldable expr ([], vars) = 
+    ([[newTopFuncInstrs] ++ newOtherFuncs], combineVars vars newVars)
+    where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
+
 compileExprFoldable expr ([topFunc:otherFuncs], vars) =
     ([[topFunc ++ newTopFuncInstrs] ++ otherFuncs ++ newOtherFuncs], combineVars vars newVars)
     where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
@@ -114,6 +124,9 @@ compileDefinitions :: [Definition] -> VariableSet -> CompileResult
 compileDefinitions defs vars = foldr (compileDefsFoldable vars) ([], Map.empty) defs
 
 compileDefsFoldable :: VariableSet -> Definition -> CompileResult -> CompileResult
+compileDefsFoldable vars def ([], resVariableSet)
+    =([newFunc] ++ extraNewFuncs, combineVars resVariableSet newVars)
+    where ((newFunc:extraNewFuncs), newVars) = compileDefinition def vars
 compileDefsFoldable vars def ((mainFunc:extraFuncs), resVariableSet)
     = ([mainFunc ++ newFunc] ++ extraFuncs ++ extraNewFuncs, combineVars resVariableSet newVars)
     where ((newFunc:extraNewFuncs), newVars) = compileDefinition def vars
