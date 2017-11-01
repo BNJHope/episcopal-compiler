@@ -75,12 +75,25 @@ compileExprs exprs vars = foldr compileExprFoldable ([], Map.empty) exprs
 
 compileExprFoldable :: Expr -> CompileResult -> CompileResult
 compileExprFoldable expr ([], vars) = 
-    ([[newTopFuncInstrs] ++ newOtherFuncs], combineVars vars newVars)
-    where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
+    constructExprCompileResult ([], vars) (newFuncs, newVars)
+        where (newFuncs, newVars) = compileExpr expr vars
+    -- ([[newTopFuncInstrs] ++ newOtherFuncs], combineVars vars newVars)
+    -- where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
 
-compileExprFoldable expr ([topFunc:otherFuncs], vars) =
-    ([[topFunc ++ newTopFuncInstrs] ++ otherFuncs ++ newOtherFuncs], combineVars vars newVars)
-    where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
+compileExprFoldable expr (funcs, vars) =
+    constructExprCompileResult (funcs, vars) (newFuncs, newVars)
+    where (newFuncs, newVars) = compileExpr expr vars
+    -- ([[topFunc ++ newTopFuncInstrs] ++ otherFuncs ++ newOtherFuncs], combineVars vars newVars)
+    -- where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
+
+constructExprCompileResult :: CompileResult -> CompileResult -> CompileResult
+constructExprCompileResult ([], oldVars) ([], newVars) = ([], combineVars oldVars newVars)
+constructExprCompileResult ([], oldVars) (newFuncs, newVars)
+    = (newFuncs, combineVars oldVars newVars)
+constructExprCompileResult (oldFuncs, oldVars) ([], newVars)
+    = (oldFuncs, combineVars oldVars newVars)
+constructExprCompileResult ((oldTopFunc:oldExtraFuncs), oldVars) ((newTopFunc:newExtraFuncs), newVars)
+    = ([oldTopFunc ++ newTopFunc] ++ oldExtraFuncs ++ newExtraFuncs, combineVars oldVars newVars)
 
 -- | Compile an expression type
 compileExpr :: Expr -> VariableSet -> CompileResult
