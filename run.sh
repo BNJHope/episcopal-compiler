@@ -4,10 +4,33 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 JASMIN_PATH="./bin/jasmin.jar"
 
+declare -A codesamples
 declare -A answers
+
+read -r -d '' codesamples[TestConst] << 'EndOfSample'
+episcopal TestConst = 1
+EndOfSample
 answers[TestConst]=1.0
+
+read -r -d '' codesamples[TestFunc] << 'EndOfSample'
+episcopal TestFunc = let sum x y = x + y in 
+                         sum 42 42
+EndOfSample
 answers[TestFunc]=84.0
+
+read -r -d '' codesamples[TestNestedFunc] << EndOfSample
+episcopal TestNestedFuncs = let sum x y = x + y in
+                            let increment x = sum z 1 in
+                            increment 42
+EndOfSample
 answers[TestNestedFunc]=43.0
+
+read -r -d '' codesamples[TestQuery] << EndOfSample
+episcopal TestQuery = sum 42 42 (where
+                     query sum x y =
+                     x + y)
+EndOfSample
+answers[TestQuery]=84.0
 
 echo -e "${BLUE}--- Building Compiler ---${NC}\n"
 cabal clean; cabal build
@@ -22,7 +45,9 @@ do
     java -jar $JASMIN_PATH $file -d output_classfiles
 done
 
-echo -e "\n${BLUE}--- Testing classfiles ---${NC}\n"
+
+
+echo -e "\n${BLUE}--- Testing classfiles ---${NC}"
 CLASSFILES=output_classfiles/*
 tests_passed=0
 total_tests=0
@@ -31,11 +56,14 @@ do
     filename=$(basename $classfile)
     testname="${filename%%.*}"
     echo -e "\n${GREEN}--- Testing $testname ---${NC}\n"
+    echo -e "Equivalent Episcopal Code:\n"
+    echo -e "${codesamples[$testname]}"
     expected=${answers[$testname]}
     actual=$(java -cp output_classfiles $testname)
-    echo "Expected Result : $expected"
+    echo -e "\nExpected Result : $expected"
     echo "Actual Result : $actual"
-    if[[ "$expected" == "$actual" ]]; then
+    if [[ $expected == $actual ]];
+    then
         let "tests_passed++"
     else
         echo -e "${RED}$testname FAILED"
@@ -44,5 +72,5 @@ do
 done
 
 echo -e "\n${BLUE}--- Test Results --- ${NC}\n"
-echo -e "\n${GREEN}Tests Passed : $tests_passed"
+echo -e "${GREEN}Tests Passed : $tests_passed"
 echo -e "${GREEN}Total Tests : $total_tests\n"
