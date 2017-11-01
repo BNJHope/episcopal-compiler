@@ -37,8 +37,8 @@ loadConstantOntoStack (EInt int) | (int < 128) && (int > -129) = "bipush " ++ sh
 loadConstantOntoStack (EFloat float) = "ldc " ++ show float
 
 convertConsantToString :: Constant -> Instruction
-convertConsantToString (EInt val) = "invokestatic java/lang/String/valueOf(I)Ljava/lang/String;"
-convertConstantToString (EFloat val) = "invokestatic java/lang/String/valueOf(F)Ljava/lang/String;"
+convertConsantToString (EInt _) = "invokestatic java/lang/String/valueOf(I)Ljava/lang/String;"
+convertConstantToString (EFloat _) = "invokestatic java/lang/String/valueOf(F)Ljava/lang/String;"
 
 convertFloatToString :: Instruction
 convertFloatToString = "invokestatic java/lang/String/valueOf(F)Ljava/lang/String;"

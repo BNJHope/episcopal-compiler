@@ -1,3 +1,5 @@
 dist
 episcopal.out
 output_progs/
+output_classfiles/
+bin
