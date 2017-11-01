@@ -1,6 +1,6 @@
 module Compiler
 ( compile,
-    compileExprFoldable
+compileExpr
 ) where
 
 import Data.Map (Map)
@@ -10,6 +10,7 @@ import Structures
 import ProgramInfo
 import PrintResult
 import EpiscopalResult
+import Debug.Trace
 
 type ClassName = String
 type VariableAddress = Int
@@ -39,14 +40,14 @@ compileFunctionSet expr queries vars =
     -- Main method from initial expression
     compileMainMethod [expr] vars
     -- Remaining functions from the queries
-    ++ foldr (\query funcs -> funcs ++ (compileMethod (queryId query) (queryArgs query) (queryExprs query))) [] queries
+    ++ foldr (\query funcs -> funcs ++ (compileMethod (queryId query) (queryArgs query) (queryExprs query) vars)) [] queries
 
 -- | Compile a method and return a list of functions
 -- | where the first function is the method that has been
 -- | compiled and the rest are methods defined within the
 -- | method.
-compileMethod :: ID -> [Arg] -> [Expr] -> [FunctionResult]
-compileMethod id args exprs =
+compileMethod :: ID -> [Arg] -> [Expr] -> VariableSet -> [FunctionResult]
+compileMethod id args exprs vars =
     -- Get method header
     [[getMethodHeader id args]
     ++ [getStackLimit 20]
@@ -55,7 +56,7 @@ compileMethod id args exprs =
     ++ [getFloatReturn]
     ++ [getEndMethod]]
     ++ otherFuncs
-    where ((compiledExpr:otherFuncs), _) = compileExprs exprs $ createVarSet args 0
+    where ((compiledExpr:otherFuncs), _) = compileExprs exprs $ combineVars (createVarSet args 0) vars
 
 compileMainMethod :: [Expr] -> VariableSet -> [FunctionResult]
 compileMainMethod exprs vars =
@@ -68,23 +69,20 @@ compileMainMethod exprs vars =
     ++ [getEndMethod]]
     ++ otherFuncs
     where
-        ((mainFunc:otherFuncs), _) = foldr compileExprFoldable ([], Map.empty) exprs
+        ((mainFunc:otherFuncs), _) = compileExprs exprs vars
 
 compileExprs :: [Expr] -> VariableSet -> CompileResult
-compileExprs exprs vars = foldr compileExprFoldable ([], Map.empty) exprs
+-- compileExprs exprs vars = trace ("Compiling exprs\nVars: " ++ (show vars)) (compileExprs' exprs vars)
+compileExprs exprs vars = foldr compileExprFoldable ([], vars) exprs
 
 compileExprFoldable :: Expr -> CompileResult -> CompileResult
-compileExprFoldable expr ([], vars) = 
-    constructExprCompileResult ([], vars) (newFuncs, newVars)
-        where (newFuncs, newVars) = compileExpr expr vars
-    -- ([[newTopFuncInstrs] ++ newOtherFuncs], combineVars vars newVars)
-    -- where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
+compileExprFoldable expr ([], oldVars) = 
+    constructExprCompileResult ([], oldVars) (newFuncs, newVars)
+        where (newFuncs, newVars) = compileExpr expr oldVars
 
 compileExprFoldable expr (funcs, vars) =
     constructExprCompileResult (funcs, vars) (newFuncs, newVars)
     where (newFuncs, newVars) = compileExpr expr vars
-    -- ([[topFunc ++ newTopFuncInstrs] ++ otherFuncs ++ newOtherFuncs], combineVars vars newVars)
-    -- where ([newTopFuncInstrs:newOtherFuncs], newVars) = compileExpr expr vars
 
 constructExprCompileResult :: CompileResult -> CompileResult -> CompileResult
 constructExprCompileResult ([], oldVars) ([], newVars) = ([], combineVars oldVars newVars)
@@ -102,15 +100,18 @@ compileExpr (ExprDef defs nextExpr) vars =
     let (newFuncs, newVars) = compileDefinitions defs vars
         ((restOfExpression:extraFunctions), _) = compileExpr nextExpr newVars
     in ([restOfExpression] ++ newFuncs ++ extraFunctions, vars)
-compileExpr (ExprReference id) vars = ([vars Map.! id], vars)
+-- compileExpr (ExprReference id) vars = trace ("Compiling expr reference\nID : " ++ id ++ "\nVars : " ++ show vars) (compileExpr' (ExprReference id) vars)
+
 compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], vars)
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 
+compileExpr (ExprReference id) vars = ([vars Map.! id], vars)
+
 -- | Compile query
-compileQuery :: Query -> [FunctionResult]
-compileQuery (Query queryId queryArgs queryExprs)
-    = compileMethod queryId queryArgs queryExprs
+compileQuery :: Query -> VariableSet -> [FunctionResult]
+compileQuery (Query queryId queryArgs queryExprs) vars
+    = compileMethod queryId queryArgs queryExprs vars
 
 -- | Compile the instructions for when another method is called.
 compileMethodCall :: ID -> [Expr] -> VariableSet -> [Instruction]
@@ -150,7 +151,7 @@ compileDefinition (VarDef varId varExpr) vars = ([] ++ extraFuncs, Map.insert va
     where ((definition:extraFuncs) , newVars) = compileExpr varExpr vars
 
 compileDefinition (FuncDef id args exprs) vars = (funcs, vars)
-    where funcs = compileMethod id args exprs
+    where funcs = compileMethod id args exprs vars
 
 compileBinOp :: BinOp -> VariableSet -> CompileResult
 compileBinOp (BinOp ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, vars)
