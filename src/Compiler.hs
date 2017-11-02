@@ -103,13 +103,17 @@ compileExpr (ExprDef defs nextExpr) vars =
     let (newFuncs, newVars) = compileDefinitions defs vars
         ((restOfExpression:extraFunctions), _) = compileExpr nextExpr newVars
     in ([restOfExpression] ++ newFuncs ++ extraFunctions, vars)
--- compileExpr (ExprReference id) vars = trace ("Compiling expr reference\nID : " ++ id ++ "\nVars : " ++ show vars) (compileExpr' (ExprReference id) vars)
-
 compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], vars)
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 compileExpr (ExprReference id) vars = ([vars Map.! id], vars)
--- compileExpr (ExprSample expr) vars = compileSample
+compileExpr (ExprSample expr) vars = compileSample expr vars
+
+compileSample :: Expr -> VariableSet -> CompileResult
+-- eval the expr - it needs to come out with
+-- a distribution at the top of the stack
+-- call the sample method
+-- compileSample expr vars = [[topExpr ++  callSampleMethod] ++ otherFuncs]
 
 -- | Compile query
 compileQuery :: Query -> VariableSet -> [FunctionResult]
@@ -231,6 +235,9 @@ getInitMethodHeader =  ".method public <init>()V"
 
 invokeObjectInit :: Instruction
 invokeObjectInit = "invokenonvirtual java/lang/Object/<init>()V"
+
+invokeSampleMethod :: ID -> Instruction
+invokeSampleMethod distrId = "invokevirtual Method " ++ distrId ++ "/sample:()Ljava/lang/Float"
 
 getMainMethodHeader :: Instruction
 getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"

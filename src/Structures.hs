@@ -48,7 +48,7 @@ data Query = Query {
 data Expr = ExprConstant Constant
     | ExprDef [Definition] Expr
     | ExprObserve Expr Expr
-    | ExprSample Expr
+    | ExprSample DistUserDefined
     | ExprDistrib Distribution
     | ExprReference ID
     | ExprFunctionCall ID [Expr]
