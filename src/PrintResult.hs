@@ -24,7 +24,7 @@ importPrintStreamInstruction :: Instruction
 importPrintStreamInstruction = "getstatic java/lang/System/out Ljava/io/PrintStream;"
 
 getNewLine :: Instruction
-getNewLine = "\n"
+getNewLine = ""
 
 getComment :: Instruction -> Instruction
 getComment comm = ";; " ++ comm

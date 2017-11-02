@@ -32,6 +32,14 @@ episcopal TestQuery = sum 42 42 (where
 EndOfSample
 answers[TestQuery]=84.0
 
+read -r -d '' codesamples[TestNestedFuncInQuery] << EndOfSample
+episcopal TestNestedFuncInQuery = increment 42 (where
+                     query increment z =
+                     let sum x y = x + y in
+                     sum z 1)
+EndOfSample
+answers[TestNestedFuncInQuery]=43.0
+
 echo -e "${BLUE}--- Building Compiler ---${NC}\n"
 cabal clean; cabal build
 

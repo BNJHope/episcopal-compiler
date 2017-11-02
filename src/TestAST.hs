@@ -6,7 +6,11 @@ getTestASTs
 import Structures
 
 getTestASTs :: [Program]
-getTestASTs = [getTestAST1, getTestAST2, getTestAST3, getTestAST4]
+getTestASTs = [getTestAST1,
+    getTestAST2,
+    getTestAST3,
+    getTestAST4,
+    getTestAST5]
 
 getTestAST1 :: Program
 getTestAST1 = Program "TestConst" constant1 []
@@ -20,6 +24,9 @@ getTestAST3 = Program "TestNestedFunc" func2 []
 getTestAST4 :: Program
 getTestAST4 = Program "TestQuery" (funcCallSum constant42 constant42) [querySum]
 
+getTestAST5 :: Program
+getTestAST5 = Program "TestNestedFuncInQuery" (funcCallIncrement constant42) [queryIncrement]
+
 func1 :: Expr
 func1 = ExprDef [funcDefSum] (funcCallSum constant42 constant42)
 
@@ -28,6 +35,9 @@ func2 = ExprDef [funcDefSum, funcDefIncrement] $ funcCallIncrement constant42
 
 querySum :: Query
 querySum = Query "sum" ["x", "y"] [addXY]
+
+queryIncrement :: Query
+queryIncrement = Query "increment" ["z"] [ExprDef [funcDefSum] (funcCallSum (ExprReference "z") constant1)] 
 
 funcDefIncrement :: Definition
 funcDefIncrement = (FuncDef "increment" ["z"] [(funcCallSum (ExprReference "z") constant1)])
