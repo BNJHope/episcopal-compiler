@@ -4,6 +4,9 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 JASMIN_PATH="./bin/jasmin.jar"
 
+mkdir output_progs
+mkdir output_classfiles
+
 declare -A codesamples
 declare -A answers
 
