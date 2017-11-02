@@ -4,7 +4,7 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 JASMIN_PATH="./bin/jasmin.jar"
 
-if [ ! -d output_prog ]; then
+if [ ! -d output_progs ]; then
     mkdir output_progs
 fi
 
