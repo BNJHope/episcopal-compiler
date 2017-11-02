@@ -108,8 +108,8 @@ compileExpr (ExprDef defs nextExpr) vars =
 compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], vars)
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
-
 compileExpr (ExprReference id) vars = ([vars Map.! id], vars)
+-- compileExpr (ExprSample expr) vars = compileSample
 
 -- | Compile query
 compileQuery :: Query -> VariableSet -> [FunctionResult]
