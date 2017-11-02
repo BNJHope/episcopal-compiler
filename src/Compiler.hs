@@ -57,7 +57,7 @@ compileMethod id args exprs vars =
     ++ [getEndMethod]
     ++ [getNewLine]]
     ++ otherFuncs
-    where ((compiledExpr:otherFuncs), _) = compileExprs exprs $ combineVars (createVarSet args 0) vars
+    where ((compiledExpr:otherFuncs), classes, _) = compileExprs exprs $ combineVars (createVarSet args 0) vars
 
 compileMainMethod :: [Expr] -> VariableSet -> [FunctionResult]
 compileMainMethod exprs vars =
@@ -72,48 +72,47 @@ compileMainMethod exprs vars =
     ++ [getNewLine]]
     ++ otherFuncs
     where
-        ((mainFunc:otherFuncs), _) = compileExprs exprs vars
+        ((mainFunc:otherFuncs), classes , _) = compileExprs exprs vars
 
 compileExprs :: [Expr] -> VariableSet -> CompileResult
 -- compileExprs exprs vars = trace ("Compiling exprs\nVars: " ++ (show vars)) (compileExprs' exprs vars)
-compileExprs exprs vars = foldr compileExprFoldable ([], vars) exprs
+compileExprs exprs vars = foldr compileExprFoldable ([], [], vars) exprs
 
 compileExprFoldable :: Expr -> CompileResult -> CompileResult
-compileExprFoldable expr ([], oldVars) = 
-    constructExprCompileResult ([], oldVars) (newFuncs, newVars)
-        where (newFuncs, newVars) = compileExpr expr oldVars
+compileExprFoldable expr ([], classes, oldVars) = 
+    constructExprCompileResult ([], classes, oldVars) (newFuncs, newClasses, newVars)
+        where (newFuncs, newClasses, newVars) = compileExpr expr oldVars
 
-compileExprFoldable expr (funcs, vars) =
-    constructExprCompileResult (funcs, vars) (newFuncs, newVars)
-    where (newFuncs, newVars) = compileExpr expr vars
+compileExprFoldable expr (funcs, classes, vars) =
+    constructExprCompileResult (funcs, classes, vars) (newFuncs, newClasses, newVars)
+    where (newFuncs, newClasses, newVars) = compileExpr expr vars
 
 constructExprCompileResult :: CompileResult -> CompileResult -> CompileResult
-constructExprCompileResult ([], oldVars) ([], newVars) = ([], combineVars oldVars newVars)
-constructExprCompileResult ([], oldVars) (newFuncs, newVars)
-    = (newFuncs, combineVars oldVars newVars)
-constructExprCompileResult (oldFuncs, oldVars) ([], newVars)
-    = (oldFuncs, combineVars oldVars newVars)
-constructExprCompileResult ((oldTopFunc:oldExtraFuncs), oldVars) ((newTopFunc:newExtraFuncs), newVars)
-    = ([oldTopFunc ++ newTopFunc] ++ oldExtraFuncs ++ newExtraFuncs, combineVars oldVars newVars)
+constructExprCompileResult ([], oldClasses , oldVars) ([], newClasses, newVars) = ([], oldClasses ++ newClasses, combineVars oldVars newVars)
+constructExprCompileResult ([], oldClasses, oldVars) (newFuncs, newClasses, newVars)
+    = (newFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
+constructExprCompileResult (oldFuncs, oldClasses, oldVars) ([], newClasses, newVars)
+    = (oldFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
+constructExprCompileResult ((oldTopFunc:oldExtraFuncs), oldClasses, oldVars) ((newTopFunc:newExtraFuncs), newClasses, newVars)
+    = ([oldTopFunc ++ newTopFunc] ++ oldExtraFuncs ++ newExtraFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
 
 -- | Compile an expression type
 compileExpr :: Expr -> VariableSet -> CompileResult
-compileExpr (ExprConstant const) vars = ([compileConstant const], vars)
+compileExpr (ExprConstant const) vars = ([compileConstant const], [] , vars)
 compileExpr (ExprDef defs nextExpr) vars =
-    let (newFuncs, newVars) = compileDefinitions defs vars
-        ((restOfExpression:extraFunctions), _) = compileExpr nextExpr newVars
-    in ([restOfExpression] ++ newFuncs ++ extraFunctions, vars)
-compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], vars)
+    let (newFuncs, defClasses, newVars) = compileDefinitions defs vars
+        ((restOfExpression:extraFunctions), exprClasses, _) = compileExpr nextExpr newVars
+    in ([restOfExpression] ++ newFuncs ++ extraFunctions, defClasses ++ exprClasses, vars)
+compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], [], vars)
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
-compileExpr (ExprReference id) vars = ([vars Map.! id], vars)
-compileExpr (ExprSample expr) vars = compileSample expr vars
+compileExpr (ExprReference id) vars = ([vars Map.! id], [], vars)
+-- compileExpr (ExprSample expr) vars = compileSample expr vars
 
-compileSample :: Expr -> VariableSet -> CompileResult
--- eval the expr - it needs to come out with
--- a distribution at the top of the stack
--- call the sample method
--- compileSample expr vars = [[topExpr ++  callSampleMethod] ++ otherFuncs]
+-- compileSample :: Expr -> VariableSet -> CompileResult
+-- load the distribution and then 
+-- compileSample (ExprReference id) vars = ([vars Map.! id]
+  --  ++ invokeSampleMethod
 
 -- | Compile query
 compileQuery :: Query -> VariableSet -> [FunctionResult]
@@ -134,7 +133,7 @@ compileMethodCall methodId exprs vars =
         ++ "(" ++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
         ++ ")" ++ "F" ]
         where (classname:_) = vars Map.! "__classname__"
-              (compiledExprs, newVars) = compileExprs exprs vars
+              (compiledExprs, classes, newVars) = compileExprs exprs vars
 
 combineFuncs :: [FunctionResult] -> [Instruction]
 combineFuncs funcs = foldr (\func instrsList -> instrsList ++ func) [] funcs
@@ -148,28 +147,27 @@ compileConstant (EPercentage val) = compilePercentage val
 
 -- | Compile a set of definitions.
 compileDefinitions :: [Definition] -> VariableSet -> CompileResult
-compileDefinitions defs vars = foldr (compileDefsFoldable vars) ([], Map.empty) defs
+compileDefinitions defs vars = foldr (compileDefsFoldable vars) ([], [], Map.empty) defs
 
 compileDefsFoldable :: VariableSet -> Definition -> CompileResult -> CompileResult
-compileDefsFoldable vars def ([], resVariableSet)
-    =([newFunc] ++ extraNewFuncs, combineVars resVariableSet newVars)
-    where ((newFunc:extraNewFuncs), newVars) = compileDefinition def vars
-compileDefsFoldable vars def ((mainFunc:extraFuncs), resVariableSet)
-    = ([mainFunc ++ newFunc] ++ extraFuncs ++ extraNewFuncs, combineVars resVariableSet newVars)
-    where ((newFunc:extraNewFuncs), newVars) = compileDefinition def vars
+compileDefsFoldable vars def ([], classes, resVariableSet)
+    =([newFunc] ++ extraNewFuncs, classes ++ newClasses , combineVars resVariableSet newVars)
+    where ((newFunc:extraNewFuncs), newClasses, newVars) = compileDefinition def vars
+compileDefsFoldable vars def ((mainFunc:extraFuncs), classes, resVariableSet)
+    = ([mainFunc ++ newFunc] ++ extraFuncs ++ extraNewFuncs, classes ++ newClasses, combineVars resVariableSet newVars)
+    where ((newFunc:extraNewFuncs), newClasses, newVars) = compileDefinition def vars
 
 -- | Compile a set of variable and function definitions.
 compileDefinition :: Definition -> VariableSet -> CompileResult
-compileDefinition (VarDef varId varExpr) vars = ([] ++ extraFuncs, Map.insert varId definition newVars)
-    where ((definition:extraFuncs) , newVars) = compileExpr varExpr vars
-
-compileDefinition (FuncDef id args exprs) vars = (funcs, vars)
+compileDefinition (VarDef varId varExpr) vars = ([] ++ extraFuncs, classDefs, Map.insert varId definition newVars)
+    where ((definition:extraFuncs), classDefs , newVars) = compileExpr varExpr vars
+compileDefinition (FuncDef id args exprs) vars = (funcs, [], vars)
     where funcs = compileMethod id args exprs vars
 
 compileBinOp :: BinOp -> VariableSet -> CompileResult
-compileBinOp (BinOp ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, vars)
-    where ((expr1Result:expr1ExtraFuncs), expr1NewVars) = compileExpr expr1 vars
-          ((expr2Result:expr2ExtraFuncs), expr2NewVars) = compileExpr expr2 vars
+compileBinOp (BinOp ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, newClasses1 ++ newClasses2, vars)
+    where ((expr1Result:expr1ExtraFuncs), newClasses1, expr1NewVars) = compileExpr expr1 vars
+          ((expr2Result:expr2ExtraFuncs), newClasses2, expr2NewVars) = compileExpr expr2 vars
  
 -- | Get the header of a method.
 getMethodHeader :: ID -> [Arg] -> Instruction

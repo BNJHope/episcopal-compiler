@@ -21,8 +21,9 @@ import Instruction
 type ID = String
 type VariableSet = Map ID [Instruction]
 type FunctionResult = [Instruction]
+type ClassResult = [FunctionResult]
 
-type CompileResult = ([FunctionResult], VariableSet)
+type CompileResult = ([FunctionResult], [ClassResult], VariableSet)
 
 data Expression = EExpr Expr
     | EConstant Constant
@@ -48,7 +49,7 @@ data Query = Query {
 data Expr = ExprConstant Constant
     | ExprDef [Definition] Expr
     | ExprObserve Expr Expr
-    | ExprSample DistUserDefined
+    | ExprSample Expr
     | ExprDistrib Distribution
     | ExprReference ID
     | ExprFunctionCall ID [Expr]
