@@ -2,7 +2,7 @@ package Distribution;
 
 import java.util.Random;
 
-public class Normal implements IDistribution {
+public class Normal extends Distribution {
 
     private Float mean;
 

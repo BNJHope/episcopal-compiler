@@ -2,7 +2,7 @@ package Distribution;
 
 import java.util.Random;
 
-public class Bernoulli implements IDistribution {
+public class Bernoulli extends Distribution {
 
     private Float p;
 
