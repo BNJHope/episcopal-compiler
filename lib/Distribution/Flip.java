@@ -14,4 +14,9 @@ public class Flip implements IDistribution {
         return (result < p) ? new Float(1.0f) : new Float(0.0f);
     }
 
+    @Override
+    public String toString() {
+        return("Flip p:" + this.p);
+    }
+
 }
