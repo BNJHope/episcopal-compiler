@@ -16,10 +16,9 @@ handleInput :: IO()
 handleInput = do
     mapM_ (\ast ->
         writeInstructionsToFile (getFilenameFromProgramStructure ast) $ compile ast) getTestASTs
-    -- writeInstructionsToFile "episcopal.out" $ compile $ head $ getTestASTs
 
 getFilenameFromProgramStructure :: Program -> String
-getFilenameFromProgramStructure prog = "output_progs/" ++ (programId prog) ++ ".epscpl"
+getFilenameFromProgramStructure prog = "output_progs/" ++ (programId prog) ++ ".j"
 
 -- | Get the program info structure from the set of arguments.
 getProgramInfo :: [String] -> ProgramInfo
