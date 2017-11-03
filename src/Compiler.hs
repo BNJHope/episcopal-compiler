@@ -320,17 +320,85 @@ compileDefinition (FuncDef id args exprs) vars = (funcs, [], vars)
 
 -- | Compile the given binary operation.
 compileBinOp :: BinOp -> VariableSet -> CompileResult
+
 compileBinOp (BinOp ADD expr1 expr2) vars
+    = getBinOpCompilationResult expr1 expr2 ["fadd"] vars
+
+compileBinOp (BinOp MULT expr1 expr2) vars
+    = getBinOpCompilationResult expr1 expr2 ["fmul"] vars
+
+compileBinOp (BinOp SUBTRACT expr1 expr2) vars
+    = getBinOpCompilationResult expr1 expr2 ["fsub"] vars
+
+compileBinOp (BinOp OVER expr1 expr2) vars
+    = getBinOpCompilationResult expr1 expr2 ["fdiv"] vars
+
+compileBinOp (BinOp OR expr1 expr2) vars
+    = getBinOpAndOrEqCompilationResult expr1 expr2 ["ior"] vars
+
+compileBinOp (BinOp AND expr1 expr2) vars
+    = getBinOpAndOrEqCompilationResult expr1 expr2 ["iand"] vars
+
+compileBinOp (BinOp GREATER_THAN expr1 expr2) vars
+    = getBinOpCompilationResult expr1 expr2 (["fcmpg"] ++ [invokeIntToFloat]) vars
+
+compileBinOp (BinOp LESS_THAN expr1 expr2) vars
+    = getBinOpCompilationResult expr1 expr2 (["fcmpl"] ++ [invokeIntToFloat]) vars
+
+compileBinOp (BinOp EQUALS expr1 expr2) vars
+    = getBinOpAndOrEqCompilationResult expr1 expr2 getBinOpEqualityResultFunc vars
+
+-- | Get the compilation result from performing a
+-- | binary operation on two expressions.
+getBinOpCompilationResult :: Expr -> Expr -> [Instruction] -> VariableSet -> CompileResult
+getBinOpCompilationResult expr1 expr2 opInstrs vars
     = ( [expr1Result
         ++ [invokeFloatValueOf]
         ++ expr2Result
         ++ [invokeFloatValueOf]
-        ++ ["fadd"]
+        ++ opInstrs
         ++ [invokeCreateFloatObject]]
         ++ expr1ExtraFuncs
         ++ expr2ExtraFuncs, newClasses1 ++ newClasses2, vars)
     where ((expr1Result:expr1ExtraFuncs), newClasses1, expr1NewVars) = compileExpr expr1 vars
           ((expr2Result:expr2ExtraFuncs), newClasses2, expr2NewVars) = compileExpr expr2 vars
+
+-- | Get the compilation result from
+-- | performing a binary operation on the stack where
+-- | the results of the two expressions need to be converted
+-- | into int values before the operation is carried out.
+getBinOpAndOrEqCompilationResult :: Expr -> Expr -> [Instruction] -> VariableSet -> CompileResult
+getBinOpAndOrEqCompilationResult expr1 expr2 opInstrs vars
+    = ( [expr1Result
+        ++ [invokeFloatValueOf]
+        ++ [invokeFloatToInt]
+        ++ expr2Result
+        ++ [invokeFloatValueOf]
+        ++ [invokeFloatToInt]
+        ++ opInstrs
+        ++ [invokeIntToFloat]
+        ++ [invokeCreateFloatObject]]
+        ++ expr1ExtraFuncs
+        ++ expr2ExtraFuncs, newClasses1 ++ newClasses2, vars)
+    where ((expr1Result:expr1ExtraFuncs), newClasses1, expr1NewVars) = compileExpr expr1 vars
+          ((expr2Result:expr2ExtraFuncs), newClasses2, expr2NewVars) = compileExpr expr2 vars
+
+-- | Get the set of instructions
+-- | that compare an equality. If the
+-- | values are equal, the result loads
+-- | 1 onto the stack. If there are not
+-- | equal, it loads 0 onto the stack.
+getBinOpEqualityResultFunc :: [Instruction]
+getBinOpEqualityResultFunc = 
+    ["ifeq Equality"]
+    ++ ["ldc 0"]
+    ++ ["i2f"]
+    ++ ["goto EndEquality"]
+    ++ ["Equality:"]
+    ++ ["ldc 1"]
+    ++ ["i2f"]
+    ++ ["EndEquality:"]
+    
 
 -- | Get the header of a method.
 getMethodHeader :: ID -> [Arg] -> Instruction
@@ -446,6 +514,11 @@ getIntFromFloatObj = [invokeFloatValueOf] ++ [invokeFloatToInt]
 -- | to an int primivite.
 invokeFloatToInt :: Instruction
 invokeFloatToInt = "f2i"
+
+-- | Invoke the function for converting an int
+-- | primitive into a float primitive.
+invokeIntToFloat :: Instruction
+invokeIntToFloat = "i2f"
 
 -- | Get the header line for the main method.
 getMainMethodHeader :: Instruction
