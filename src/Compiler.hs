@@ -65,7 +65,7 @@ compileMainMethod exprs vars =
     ++ [getLocalsLimit 20]
     ++ [importPrintStreamInstruction]
     ++ mainFunc
-    ++ printFloat
+    ++ [printObject]
     ++ [getVoidReturn]
     ++ [getEndMethod]
     ++ [getNewLine]]
@@ -127,7 +127,6 @@ compileExpr (ExprDef defs nextExpr) vars =
     in ([expressionToReturn] ++ newFuncs ++ extraFunctions, defClasses ++ exprClasses, vars)
 
 compileExpr (ExprFunctionCall id exprs) vars = ((compileMethodCall id exprs vars), [], vars)
-    --where (methodCall:extraFuncs) = compileMethodCall id exprs vars
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 compileExpr (ExprReference id) vars = ([vars Map.! id], [], vars)
@@ -155,8 +154,8 @@ compileMethodCall methodId exprs vars =
         "invokestatic "
         ++ classname
         ++ "/" ++ methodId
-        ++ "(" ++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
-        ++ ")" ++ "F" ]]
+        ++ "(" ++ (foldr (\arg argsSig -> argsSig ++ "Ljava/lang/Float;") "" exprs)
+        ++ ")" ++ "Ljava/lang/Float;" ]]
 
         -- Add any additional expressions, such as new functions, into the set
         -- of functions to be returned.
@@ -203,10 +202,18 @@ compileDefinition (FuncDef id args exprs) vars = (funcs, [], vars)
 
 -- | Compile the given binary operation.
 compileBinOp :: BinOp -> VariableSet -> CompileResult
-compileBinOp (BinOp ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, newClasses1 ++ newClasses2, vars)
+compileBinOp (BinOp ADD expr1 expr2) vars
+    = ( [expr1Result
+        ++ [invokeFloatValueOf]
+        ++ expr2Result
+        ++ [invokeFloatValueOf]
+        ++ ["fadd"]
+        ++ [invokeCreateFloatObject]]
+        ++ expr1ExtraFuncs
+        ++ expr2ExtraFuncs, newClasses1 ++ newClasses2, vars)
     where ((expr1Result:expr1ExtraFuncs), newClasses1, expr1NewVars) = compileExpr expr1 vars
           ((expr2Result:expr2ExtraFuncs), newClasses2, expr2NewVars) = compileExpr expr2 vars
- 
+
 -- | Get the header of a method.
 getMethodHeader :: ID -> [Arg] -> Instruction
 getMethodHeader id args = ".method public static " ++ id ++ "(" ++ argsSymbs ++ ")" ++ getReturnSymb
@@ -214,16 +221,16 @@ getMethodHeader id args = ".method public static " ++ id ++ "(" ++ argsSymbs ++ 
 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
-compileInt val = ["ldc " ++ show val] ++ ["i2f"]
+compileInt val = ["ldc " ++ show val] ++ ["i2f"] ++ [invokeCreateFloatObject]
 
 -- | Compile a float
 compileFloat :: Float -> [Instruction]
-compileFloat val = ["ldc " ++ show val]
+compileFloat val = ["ldc " ++ show val] ++ [invokeCreateFloatObject]
 
 -- | Compile a boolean
 compileBool :: Bool -> [Instruction]
-compileBool False = ["ldc " ++ show 0]
-compileBool True = ["ldc " ++ show 1]
+compileBool False = ["ldc " ++ show 0] ++ ["i2f"] ++ [invokeCreateFloatObject]
+compileBool True = ["ldc " ++ show 1] ++ ["i2f"] ++ [invokeCreateFloatObject]
 
 -- | Compile a percentage value
 compilePercentage :: Float -> [Instruction]
@@ -244,7 +251,7 @@ combineVars vars1 vars2 = Map.union vars1 vars2
 -- | Get the instruction for loading an argument
 -- | at the given location.
 getArgumentLoadInstruction :: Int -> Instruction
-getArgumentLoadInstruction index = "fload " ++ show index
+getArgumentLoadInstruction index = "aload " ++ show index
 
 -- | Load the variable at the given address onto the stack
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
@@ -282,7 +289,17 @@ invokeObjectInit = "invokenonvirtual java/lang/Object/<init>()V"
 
 -- | Get the instruction to invoke the sample method.
 invokeSampleMethod :: ID -> Instruction
-invokeSampleMethod distrId = "invokevirtual Method " ++ distrId ++ "/sample:()Ljava/lang/Float"
+invokeSampleMethod distrId = "invokevirtual " ++ distrId ++ "/sample()Ljava/lang/Float;"
+
+-- | Get the instruction to create a float object from
+-- | the first float on the stack.
+invokeCreateFloatObject :: Instruction
+invokeCreateFloatObject = "invokestatic java/lang/Float/valueOf(F)Ljava/lang/Float;"
+
+-- | Get the instruction to invoke the valueOf method
+-- | of a float object.
+invokeFloatValueOf :: Instruction
+invokeFloatValueOf = "invokevirtual java/lang/Float/floatValue()F"
 
 -- | Get the header line for the main method.
 getMainMethodHeader :: Instruction
@@ -294,11 +311,11 @@ getArgsSymbs args = foldr (\arg symbs-> symbs ++ getArgSymb arg) [] args
 
 -- | Get a return function symbol.
 getReturnSymb :: Instruction
-getReturnSymb = ['F']
+getReturnSymb = "Ljava/lang/Float;"
 
 -- Get the symbol representation of an argument in a method call.
 getArgSymb :: Arg -> Instruction
-getArgSymb arg = ['F']
+getArgSymb arg = "Ljava/lang/Float;"
 
 -- | Get the limit of the size of the stack
 getStackLimit :: StackLimit -> Instruction
@@ -314,7 +331,7 @@ getVoidReturn = "return"
 
 -- | Return a float.
 getFloatReturn :: Instruction
-getFloatReturn = "freturn"
+getFloatReturn = "areturn"
 
 -- | Determines the end of a method definition
 getEndMethod :: Instruction
