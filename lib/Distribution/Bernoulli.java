@@ -16,6 +16,6 @@ public class Bernoulli implements IDistribution {
 
     @Override
     public String toString(){
-        return("Bernoulli p = " + this.p);
+        return("Bernoulli p:" + this.p);
     }
 }
