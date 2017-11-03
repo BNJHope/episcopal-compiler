@@ -90,26 +90,50 @@ compileExprs exprs vars = foldr compileExprFoldable ([], [], vars) exprs
 -- | next expression.
 compileExprFoldable :: Expr -> CompileResult -> CompileResult
 compileExprFoldable expr (funcs, classes, vars) =
-    constructExprCompileResult (funcs, classes, vars) (newFuncs, newClasses, newVars)
-    where (newFuncs, newClasses, newVars) = compileExpr expr vars
+    constructCompileResult (funcs, classes, vars) newCompileResult
+    where newCompileResult = compileExpr expr vars
 
-constructExprCompileResult :: CompileResult -> CompileResult -> CompileResult
-constructExprCompileResult ([], oldClasses , oldVars) ([], newClasses, newVars) = ([], oldClasses ++ newClasses, combineVars oldVars newVars)
-constructExprCompileResult ([], oldClasses, oldVars) (newFuncs, newClasses, newVars)
-    = (newFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
-constructExprCompileResult (oldFuncs, oldClasses, oldVars) ([], newClasses, newVars)
-    = (oldFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
-constructExprCompileResult ((oldTopFunc:oldExtraFuncs), oldClasses, oldVars) ((newTopFunc:newExtraFuncs), newClasses, newVars)
-    = ([oldTopFunc ++ newTopFunc] ++ oldExtraFuncs ++ newExtraFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
+-- | Construct a new compile result a previous compile result version
+-- | and a new compilation result to be appended.
+constructCompileResult :: CompileResult -> CompileResult -> CompileResult
+constructCompileResult (oldFuncs, oldClasses, oldVars) (newFuncs, newClasses, newVars)
+    = (updateFuncs oldFuncs newFuncs, oldClasses ++ newClasses, combineVars oldVars newVars)
+
+-- | Update the list of functions, given a set of old functions
+-- | and a new set of functions to add to the list.
+updateFuncs :: [FunctionResult] -> [FunctionResult] -> [FunctionResult]
+updateFuncs [] [] = []
+updateFuncs [] newFuncs = newFuncs
+updateFuncs oldFuncs [] = oldFuncs
+
+-- The first element in each list is a fragment for the same function
+-- so we combine those two lists together. Any additional functions
+-- are appended to the end of the list.
+updateFuncs (oldTopFunc:oldExtraFuncs) (newTopFunc:newExtraFuncs)
+    = [oldTopFunc ++ newTopFunc] ++ oldExtraFuncs ++ newExtraFuncs
 
 -- | Compile an expression type
 compileExpr :: Expr -> VariableSet -> CompileResult
 compileExpr (ExprConstant const) vars = ([compileConstant const], [] , vars)
+
+-- Compile any definitions and then compile the expression part
+-- given the definitions that have just been compiled.
 compileExpr (ExprDef defs nextExpr) vars =
+    -- Compile the definitions
     let (newFuncs, defClasses, newVars) = compileDefinitions defs vars
-        ((restOfExpression:extraFunctions), exprClasses, _) = compileExpr nextExpr newVars
-    in ([restOfExpression] ++ newFuncs ++ extraFunctions, defClasses ++ exprClasses, vars)
-compileExpr (ExprFunctionCall id exprs) vars = ([compileMethodCall id exprs vars], [], vars)
+    
+    -- Compile the expression given the new definitions. The returned variables
+    -- are not used so we can disregard them. We split the returned functions from
+    -- head, as the head element is the main expression that has been evaluated.
+        ((expressionToReturn:extraFunctions), exprClasses, _) = compileExpr nextExpr newVars
+    
+    -- Return the expression with any extra functions and classes that were defined
+    -- that will need to be defined later. Return the original set of variables so that
+    -- scope is not leaked.
+    in ([expressionToReturn] ++ newFuncs ++ extraFunctions, defClasses ++ exprClasses, vars)
+
+compileExpr (ExprFunctionCall id exprs) vars = ((compileMethodCall id exprs vars), [], vars)
+    --where (methodCall:extraFuncs) = compileMethodCall id exprs vars
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 compileExpr (ExprReference id) vars = ([vars Map.! id], [], vars)
@@ -125,24 +149,32 @@ compileQuery :: Query -> VariableSet -> [FunctionResult]
 compileQuery (Query queryId queryArgs queryExprs) vars
     = compileMethod queryId queryArgs queryExprs vars
 
--- | Compile the instructions for when another method is called.
-compileMethodCall :: ID -> [Expr] -> VariableSet -> [Instruction]
+-- | Compile the instructions for when a method is called.
+compileMethodCall :: ID -> [Expr] -> VariableSet -> [FunctionResult]
 compileMethodCall methodId exprs vars = 
-        combineFuncs(take (length exprs) compiledExprs)
+
+        -- Load the arguments onto the stack.
+        [getArgLoadInstructions(take (length exprs) compiledExprs)
+
+        -- Get the invoke method call.
         ++ [
-        -- Compile set of expressions before function call
-        -- to load everything onto the stack
-        -- foldr (\expr instrs -> instrs ++ f)
         "invokestatic "
         ++ classname
         ++ "/" ++ methodId
         ++ "(" ++ (foldr (\arg argsSig -> argsSig ++ "F") "" exprs)
-        ++ ")" ++ "F" ]
+        ++ ")" ++ "F" ]]
+
+        -- Add any additional expressions, such as new functions, into the set
+        -- of functions to be returned.
+        ++ drop (length exprs) compiledExprs
         where (classname:_) = vars Map.! "__classname__"
               (compiledExprs, classes, newVars) = compileExprs exprs vars
 
-combineFuncs :: [FunctionResult] -> [Instruction]
-combineFuncs funcs = foldr (\func instrsList -> instrsList ++ func) [] funcs
+-- | Combine the given compiled expressions which will load
+-- | the arguments to be passed to a function call onto the stack.
+getArgLoadInstructions :: [FunctionResult] -> [Instruction]
+getArgLoadInstructions exprs
+    = foldr (\expressionInstrs instrsList -> instrsList ++ expressionInstrs) [] exprs
 
 -- | Compile a constant
 compileConstant :: Constant -> [Instruction]
@@ -155,18 +187,23 @@ compileConstant (EPercentage val) = compilePercentage val
 compileDefinitions :: [Definition] -> VariableSet -> CompileResult
 compileDefinitions defs vars = foldr (compileDefsFoldable vars) ([], [], Map.empty) defs
 
+-- | The foldable function to be applied between compilation results while
+-- | compiling a list of definitions.
 compileDefsFoldable :: VariableSet -> Definition -> CompileResult -> CompileResult
-compileDefsFoldable vars def ([], classes, resVariableSet)
-    =([newFunc] ++ extraNewFuncs, classes ++ newClasses , combineVars resVariableSet newVars)
-    where ((newFunc:extraNewFuncs), newClasses, newVars) = compileDefinition def vars
-compileDefsFoldable vars def ((mainFunc:extraFuncs), classes, resVariableSet)
-    = ([mainFunc ++ newFunc] ++ extraFuncs ++ extraNewFuncs, classes ++ newClasses, combineVars resVariableSet newVars)
-    where ((newFunc:extraNewFuncs), newClasses, newVars) = compileDefinition def vars
+compileDefsFoldable vars def cumulativeCompileResult =
+    constructCompileResult cumulativeCompileResult newCompileResult
+    where newCompileResult = compileDefinition def vars
 
 -- | Compile a set of variable and function definitions.
 compileDefinition :: Definition -> VariableSet -> CompileResult
+
+-- Compile a variable definition - return an updated variables list to be used for a sub expression
+-- in the compile result. Return a list of extra function definitions with an empty list at the start
+-- as there was no more expression code used and only extra functions.
 compileDefinition (VarDef varId varExpr) vars = ([] ++ extraFuncs, classDefs, Map.insert varId definition newVars)
     where ((definition:extraFuncs), classDefs , newVars) = compileExpr varExpr vars
+
+-- Compile a function definition.
 compileDefinition (FuncDef id args exprs) vars = (funcs, [], vars)
     where funcs = compileMethod id args exprs vars
 
@@ -183,9 +220,6 @@ getMethodHeader id args = ".method public static " ++ id ++ "(" ++ argsSymbs ++ 
 -- | Compile an integer value
 compileInt :: Int -> [Instruction]
 compileInt val = ["ldc " ++ show val] ++ ["i2f"]
-{-compileInt val | (val < 128) && (val > -129) = ["bipush " ++ show val]
-    | (val < 32768) && (val > -32769) = ["sipush " ++ show val]
-    | otherwise = ["ldc " ++ show val]-}
 
 -- | Compile a float
 compileFloat :: Float -> [Instruction]
@@ -200,12 +234,15 @@ compileBool True = ["ldc " ++ show 1]
 compilePercentage :: Float -> [Instruction]
 compilePercentage val = ["ldc " ++ show val]
 
+-- | Create a variable set - maps given
+-- | argument names to memory fetch values.
 createVarSet :: [Arg] -> Int -> VariableSet
 createVarSet [] _ = Map.empty
 createVarSet (nextArg:remainingArgs) argIndex =
     Map.insert nextArg [(getArgumentLoadInstruction argIndex)] nextVarSet
     where nextVarSet = createVarSet remainingArgs (argIndex + 1)
 
+-- | Combine a set of variables.
 combineVars :: VariableSet -> VariableSet -> VariableSet
 combineVars vars1 vars2 = Map.union vars1 vars2
 
@@ -216,10 +253,12 @@ getArgumentLoadInstruction index = "fload " ++ show index
 loadAddressFromVariableOntoStack :: VariableAddress -> Instruction
 loadAddressFromVariableOntoStack address = "aload_" ++ show address
 
+-- | Get the preamble for defining a class in Jasmin.
 getClassPreamble :: ClassName -> [Instruction]
 getClassPreamble className = [getClassnameDefinitionLine className]
     ++ [getSuperConstructorLine]
 
+-- | Get the init method for a class.
 getInitMethod :: [Instruction]
 getInitMethod = [getInitMethodHeader]
     ++ [loadAddressFromVariableOntoStack 0]
@@ -228,21 +267,27 @@ getInitMethod = [getInitMethodHeader]
     ++ [getEndMethod]
     ++ [getNewLine]
 
+-- | Get the line for defining the given class name.
 getClassnameDefinitionLine :: ClassName -> Instruction
 getClassnameDefinitionLine className = ".class public " ++ className
 
+-- | Get the super constructor instruction.
 getSuperConstructorLine :: Instruction
 getSuperConstructorLine = ".super java/lang/Object"
 
+-- | Get the header for the init method.
 getInitMethodHeader :: Instruction
 getInitMethodHeader =  ".method public <init>()V"
 
+-- | Get the line for invoking the init method.
 invokeObjectInit :: Instruction
 invokeObjectInit = "invokenonvirtual java/lang/Object/<init>()V"
 
+-- | Get the instruction to invoke the sample method.
 invokeSampleMethod :: ID -> Instruction
 invokeSampleMethod distrId = "invokevirtual Method " ++ distrId ++ "/sample:()Ljava/lang/Float"
 
+-- | Get the header line for the main method.
 getMainMethodHeader :: Instruction
 getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"
 
@@ -250,6 +295,7 @@ getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"
 getArgsSymbs :: [Arg] -> Instruction
 getArgsSymbs args = foldr (\arg symbs-> symbs ++ getArgSymb arg) [] args
 
+-- | Get a return function symbol.
 getReturnSymb :: Instruction
 getReturnSymb = ['F']
 
