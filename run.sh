@@ -128,7 +128,7 @@ episcopal TestOrFalseFalse = False or False
 EndOfSample
 answers[TestOrFalseFalse]="0.0"
 
-read -r -d '' codesamples[TestTrueTrue] << EndOfSample
+read -r -d '' codesamples[TestAndTrueTrue] << EndOfSample
 episcopal TestAndTrueTrue = True and True
 EndOfSample
 answers[TestAndTrueTrue]="1.0"
@@ -173,8 +173,21 @@ episcopal Test5Equals5 = 5 = 5
 EndOfSample
 answers[Test5Equals5]="0.0"
 
+read -r -d '' codesamples[TestObservationTrue] << EndOfSample
+episcopal TestObservationTrue = observe True in
+                                42
+EndOfSample
+answers[TestObservationTrue]="Valid with 42 as value"
+
+read -r -d '' codesamples[TestObservationFalse] << EndOfSample
+episcopal TestObservationFalse = observe False in
+                                42
+EndOfSample
+answers[TestObservationFalse]="Invalid with value 0"
+
 # Build the compiler.
 echo -e "${BLUE}--- Building Compiler ---${NC}\n"
+rm output_progs/* output_classfiles/*
 cabal clean; cabal build
 
 # Run the compiler to compile the ASTs.
