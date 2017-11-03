@@ -9,26 +9,14 @@ public class ObservationResult {
         this.result = new Float(0.0f);
     }
 
-    public ObservationResult(Boolean isValid, Float result) {
-        this.isValid = isValid;
+    public ObservationResult(Float result) {
+        this.isValid = new Boolean(true);
         this.result = result;   
     }
 
-    public Boolean getIsValid() {
-        return this.isValid;
-    };
-
-    public Float getResult() {
-        return this.result;
-    };
-
-    public void setIsValid(Boolean isValid) {
-        this.isValid = isValid;
-    };
-
-    public void setResult(Float result) {
-        this.result = result;
-    };
-
+    @Override
+    public String toString() {
+        return("Observation Result\nValid : " + this.isValid + "\nResult : " + this.result);
+    }
 
 }

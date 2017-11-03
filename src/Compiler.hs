@@ -131,6 +131,68 @@ compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 compileExpr (ExprReference id) vars = ([vars Map.! id], [], vars)
 compileExpr (ExprDistrib dist) vars = compileDistribution dist vars
 compileExpr (ExprSample expr) vars = compileSample expr vars
+compileExpr (ExprObserve validity expr) vars = compileObservation validity expr vars
+
+-- | Compile an observation expression.
+compileObservation :: Expr -> Expr -> VariableSet -> CompileResult
+compileObservation validityCheck exprToExecute vars
+    -- Get instructions to check if expression is valid
+    -- Get execute branch for when it is invalid
+    -- Get execute branch for when it is valid
+    = ([
+        -- Expression that determines validity
+        validityCheckExpr
+
+        -- Check if the expression resolves to valid.
+        ++ [getObservationCheck]
+
+        -- Get the set of instructions to carry out if invalid.
+        ++ getInvalidObersationInstrs
+
+        -- Get goto to jump over expression to be executed if it failed.
+        ++ [getGoToEndObservationLabel]
+
+        -- Get the observation execution label to jump to.
+        ++ [getObservationExecuteLabel]
+
+        -- Get a new observation result to use.
+        ++ getNewObservationResult
+
+        -- Get the evaluated expression.
+        ++ execExpression
+
+        -- Initialise the observation result
+        -- with the result.
+        ++ [getInitTrueObservationResult]
+
+        -- Get the end label for the invalid statement execution
+        -- to jump to.
+        ++ [getObservationEndLabel]]
+        ++ otherValidityFuncs ++ otherExecFuncs, validityClasses ++ execClasses, vars)
+    where
+        ((validityCheckExpr:otherValidityFuncs), validityClasses, _) = compileExpr validityCheck vars
+        ((execExpression:otherExecFuncs), execClasses, _) = compileExpr exprToExecute vars
+
+-- | Get the set of instructions
+-- | to be executed after an invalid observation
+-- | expression.
+getInvalidObersationInstrs :: [Instruction]
+getInvalidObersationInstrs = getNewObservationResult
+                            ++ [getInitFalseObservationResult]
+
+-- | Load a new observation result object
+-- | onto the stack.
+getNewObservationResult :: [Instruction]
+getNewObservationResult = ["new ObservationResult"] ++ ["dup"]
+
+-- | Init an observation result object
+-- | with default parameters (i.e validity set to false)
+getInitFalseObservationResult :: Instruction
+getInitFalseObservationResult = "invokespecial ObservationResult/<init>()V"
+
+-- | Init an observation result object
+getInitTrueObservationResult :: Instruction
+getInitTrueObservationResult = "invokespecial ObservationResult/<init>(Ljava/lang/Float;)V"
 
 -- | Compile a call to sample a distribution.
 compileSample :: Expr -> VariableSet -> CompileResult
@@ -143,19 +205,19 @@ compileDistribution :: Distribution -> VariableSet -> CompileResult
 
 -- Compile Bernoulli call
 compileDistribution (DistBernoulli expr) vars
-    = getDistributionCompileResult (getNew "Bernoulli") invokeBernoulliInit [expr] vars
+    = getDistributionCompileResult (getNewDist "Bernoulli") invokeBernoulliInit [expr] vars
 
 -- Compile Flip call
 compileDistribution (DistFlip expr) vars
-    = getDistributionCompileResult (getNew "Flip") invokeFlipInit [expr] vars
+    = getDistributionCompileResult (getNewDist "Flip") invokeFlipInit [expr] vars
     
 -- Compile Beta call
 compileDistribution (DistBeta expr1 expr2) vars
-    = getDistributionCompileResult (getNew "Beta") invokeBetaInit [expr1, expr2] vars
+    = getDistributionCompileResult (getNewDist "Beta") invokeBetaInit [expr1, expr2] vars
     
 -- Compile Normal call
 compileDistribution (DistNormal expr1 expr2) vars
-    = getDistributionCompileResult (getNew "Normal") invokeNormalInit [expr1, expr2] vars
+    = getDistributionCompileResult (getNewDist "Normal") invokeNormalInit [expr1, expr2] vars
 
 -- | Get the result from compiling a distribution, given its instructions
 -- | for making a new object and also its instructions for carrying out its
@@ -166,8 +228,8 @@ getDistributionCompileResult new init exprs vars
     where ((compiledExpr:otherFuncs), classes, _) = compileExprs exprs vars
 
 -- | Instructions for a new Bernoulli distribution.
-getNew :: Instruction -> [Instruction]
-getNew distName =  ["new " ++ distName] ++ ["dup"]
+getNewDist :: Instruction -> [Instruction]
+getNewDist distName =  ["new " ++ distName] ++ ["dup"]
 
 -- | Instructions for invoking the init of the Bernoulli.
 invokeBernoulliInit :: Instruction
@@ -322,6 +384,25 @@ getInitMethod = [getInitMethodHeader]
     ++ [getVoidReturn]
     ++ [getEndMethod]
     ++ [getNewLine]
+
+-- | Get the instruction which causes the observation to be checked.
+getObservationCheck :: Instruction
+getObservationCheck = "ifgt PassedObervation"
+
+-- | Get the label for where valid observations should start
+-- | executing.
+getObservationExecuteLabel :: Instruction
+getObservationExecuteLabel = "PassedObservation:"
+
+-- | Get the label for the failed observation to jump
+-- | to after loading its message onto the stack.
+getGoToEndObservationLabel :: Instruction
+getGoToEndObservationLabel = "goto EndObservation"
+
+-- | Get the label to jump to when
+-- | the observation statement has finished.
+getObservationEndLabel :: Instruction
+getObservationEndLabel = "EndObservation:"
 
 -- | Get the line for defining the given class name.
 getClassnameDefinitionLine :: ClassName -> Instruction
