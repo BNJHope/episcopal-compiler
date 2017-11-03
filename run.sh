@@ -61,8 +61,6 @@ do
     java -jar $JASMIN_PATH $file -d output_classfiles
 done
 
-
-
 echo -e "\n${BLUE}--- Testing classfiles ---${NC}"
 CLASSFILES=output_classfiles/*
 tests_passed=0
