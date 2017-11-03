@@ -132,6 +132,7 @@ compileExpr (ExprReference id) vars = ([vars Map.! id], [], vars)
 compileExpr (ExprDistrib dist) vars = compileDistribution dist vars
 compileExpr (ExprSample expr) vars = compileSample expr vars
 
+-- | Compile a call to sample a distribution.
 compileSample :: Expr -> VariableSet -> CompileResult
 -- load the distribution and then 
 compileSample expr vars = ([dist ++ [invokeSample]] ++ otherFuncs, classes, vars)
