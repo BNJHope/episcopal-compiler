@@ -17,12 +17,6 @@ type VariableAddress = Int
 type StackLimit = Int
 type LocalVariableLimit = Int
 
-{-
-compile :: Expression -> [Instruction]
-compile (EProgram prog) = compileProgram prog
-compile (EConstant const) = compileConstant const
--}
-
 -- | Compile a program structure
 compile :: Program -> [Instruction]
 compile prog
@@ -207,6 +201,7 @@ compileDefinition (VarDef varId varExpr) vars = ([] ++ extraFuncs, classDefs, Ma
 compileDefinition (FuncDef id args exprs) vars = (funcs, [], vars)
     where funcs = compileMethod id args exprs vars
 
+-- | Compile the given binary operation.
 compileBinOp :: BinOp -> VariableSet -> CompileResult
 compileBinOp (BinOp ADD expr1 expr2) vars = ( [expr1Result ++ expr2Result ++ ["fadd"]] ++ expr1ExtraFuncs ++ expr2ExtraFuncs, newClasses1 ++ newClasses2, vars)
     where ((expr1Result:expr1ExtraFuncs), newClasses1, expr1NewVars) = compileExpr expr1 vars
@@ -246,6 +241,8 @@ createVarSet (nextArg:remainingArgs) argIndex =
 combineVars :: VariableSet -> VariableSet -> VariableSet
 combineVars vars1 vars2 = Map.union vars1 vars2
 
+-- | Get the instruction for loading an argument
+-- | at the given location.
 getArgumentLoadInstruction :: Int -> Instruction
 getArgumentLoadInstruction index = "fload " ++ show index
 
