@@ -1,8 +1,6 @@
-package Distribution;
-
 import java.util.Random;
 
-public class Normal extends Distribution {
+public class Normal implements IDistribution {
 
     private Float mean;
 

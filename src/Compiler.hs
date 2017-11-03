@@ -130,12 +130,64 @@ compileExpr (ExprFunctionCall id exprs) vars = ((compileMethodCall id exprs vars
 compileExpr (ExprBinOp binop) vars = compileBinOp binop vars
 compileExpr (ExprBracketing expr) vars = compileExpr expr vars
 compileExpr (ExprReference id) vars = ([vars Map.! id], [], vars)
--- compileExpr (ExprSample expr) vars = compileSample expr vars
+compileExpr (ExprDistrib dist) vars = compileDistribution dist vars
+compileExpr (ExprSample expr) vars = compileSample expr vars
 
--- compileSample :: Expr -> VariableSet -> CompileResult
+compileSample :: Expr -> VariableSet -> CompileResult
 -- load the distribution and then 
--- compileSample (ExprReference id) vars = ([vars Map.! id]
-  --  ++ invokeSampleMethod
+compileSample expr vars = ([dist ++ [invokeSample]] ++ otherFuncs, classes, vars)
+    where (dist:otherFuncs, classes, _) = compileExpr expr vars
+
+-- | Compile a call to get an instance of a distribution.
+compileDistribution :: Distribution -> VariableSet -> CompileResult
+
+-- Compile Bernoulli call
+compileDistribution (DistBernoulli expr) vars
+    = getDistributionCompileResult (getNew "Bernoulli") invokeBernoulliInit [expr] vars
+
+-- Compile Flip call
+compileDistribution (DistFlip expr) vars
+    = getDistributionCompileResult (getNew "Flip") invokeFlipInit [expr] vars
+    
+-- Compile Beta call
+compileDistribution (DistBeta expr1 expr2) vars
+    = getDistributionCompileResult (getNew "Beta") invokeBetaInit [expr1, expr2] vars
+    
+-- Compile Normal call
+compileDistribution (DistNormal expr1 expr2) vars
+    = getDistributionCompileResult (getNew "Normal") invokeNormalInit [expr1, expr2] vars
+
+-- | Get the result from compiling a distribution, given its instructions
+-- | for making a new object and also its instructions for carrying out its
+-- | <init> method.
+getDistributionCompileResult :: [Instruction] -> Instruction -> [Expr] -> VariableSet -> CompileResult
+getDistributionCompileResult new init exprs vars
+    = ([new ++ compiledExpr ++ [init]] ++ otherFuncs, classes, vars)
+    where ((compiledExpr:otherFuncs), classes, _) = compileExprs exprs vars
+
+-- | Instructions for a new Bernoulli distribution.
+getNew :: Instruction -> [Instruction]
+getNew distName =  ["new " ++ distName] ++ ["dup"]
+
+-- | Instructions for invoking the init of the Bernoulli.
+invokeBernoulliInit :: Instruction
+invokeBernoulliInit = "invokespecial Bernoulli/<init>(Ljava/lang/Float;)V"
+
+-- | Instructions for invoking the init of the Flip.
+invokeFlipInit :: Instruction
+invokeFlipInit = "invokespecial Flip/<init>(Ljava/lang/Float;)V"
+
+-- | Instructions for invoking the init of the Bernoulli.
+invokeBetaInit :: Instruction
+invokeBetaInit = "invokespecial Beta/<init>(Ljava/lang/Float;Ljava/lang/Float;)V"
+
+-- | Instructions for invoking the init of the Flip.
+invokeNormalInit :: Instruction
+invokeNormalInit = "invokespecial Normal/<init>(Ljava/lang/Float;Ljava/lang/Float;)V"
+
+-- | Invoke the interface sample method on a distribution.
+invokeSample :: Instruction
+invokeSample = "invokeinterface IDistribution/sample()Ljava/lang/Float; 1"
 
 -- | Compile query
 compileQuery :: Query -> VariableSet -> [FunctionResult]
@@ -304,6 +356,10 @@ invokeFloatValueOf = "invokevirtual java/lang/Float/floatValue()F"
 -- | Get the header line for the main method.
 getMainMethodHeader :: Instruction
 getMainMethodHeader = ".method public static main([Ljava/lang/String;)V"
+
+-- | Import the dists library
+importDists :: Instruction
+importDists =  "invokenonvirtual ./lib/Bernoulli/<init>(Ljava/lang/Float;)V;"
 
 -- | Get the symbol representation of all of the arguments in a method call.
 getArgsSymbs :: [Arg] -> Instruction

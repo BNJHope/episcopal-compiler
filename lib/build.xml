@@ -3,7 +3,7 @@
     <!--Variables for paths-->
     <property name = "src.dir" value = "Distribution"/>
     <property name = "build.dir" value = "build"/>
-    <property name= "classes.dir" value="${build.dir}/classes"/>
+    <property name= "classes.dir" value="../output_classfiles"/>
     <property name= "jar.dir"     value="${build.dir}/dist"/>
     <property name="main-class"  value=""/>
 
@@ -26,6 +26,6 @@
     </target>
 
     <!--Runs clean and then constructs the jar-->
-    <target name="build-clean" depends="clean, jar"/>
+    <target name="build-clean" depends="clean, compile"/>
 
 </project>

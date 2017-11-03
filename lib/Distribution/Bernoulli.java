@@ -1,8 +1,6 @@
-package Distribution;
-
 import java.util.Random;
 
-public class Bernoulli extends Distribution {
+public class Bernoulli implements IDistribution {
 
     private Float p;
 
@@ -16,4 +14,8 @@ public class Bernoulli extends Distribution {
         return (result < p) ? new Float(1.0f) : new Float(0.0f);
     }
 
+    @Override
+    public String toString(){
+        return("Bernoulli p = " + this.p);
+    }
 }

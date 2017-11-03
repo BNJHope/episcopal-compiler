@@ -1,8 +1,6 @@
-package Distribution;
-
 import java.util.Random;
 
-public class Flip extends Distribution {
+public class Flip implements IDistribution {
 
     private Float p;
 

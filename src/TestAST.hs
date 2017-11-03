@@ -10,7 +10,9 @@ getTestASTs = [getTestAST1,
     getTestAST2,
     getTestAST3,
     getTestAST4,
-    getTestAST5]
+    getTestAST5,
+    getTestAST6,
+    getTestAST7]
 
 getTestAST1 :: Program
 getTestAST1 = Program "TestConst" constant1 []
@@ -26,6 +28,12 @@ getTestAST4 = Program "TestQuery" (funcCallSum constant42 constant42) [querySum]
 
 getTestAST5 :: Program
 getTestAST5 = Program "TestNestedFuncInQuery" (funcCallIncrement constant42) [queryIncrement]
+
+getTestAST6 :: Program
+getTestAST6 = Program "TestDistribution" exprBernoulliHalf []
+
+getTestAST7 :: Program
+getTestAST7 = Program "TestSampleBernoulli" (ExprSample exprBernoulliHalf) []
 
 func1 :: Expr
 func1 = ExprDef [funcDefSum] (funcCallSum constant42 constant42)
@@ -54,8 +62,17 @@ funcCallSum expr1 expr2 = ExprFunctionCall "sum" [expr1, expr2]
 funcCallIncrement :: Expr -> Expr
 funcCallIncrement expr1 = ExprFunctionCall "increment" [expr1]
 
+exprBernoulliHalf :: Expr
+exprBernoulliHalf = (ExprDistrib $ bernoulli constantHalf)
+
+bernoulli :: Expr -> Distribution
+bernoulli p = DistBernoulli p
+
 constant1 :: Expr
 constant1 = ExprConstant $ EInt 1
 
 constant42 :: Expr
 constant42 = ExprConstant $ EInt 42
+
+constantHalf :: Expr
+constantHalf = ExprConstant $ EFloat 0.5

@@ -1,5 +1,3 @@
-package Distribution;
-
 public class ObservationResult {
 
     private Boolean isValid;

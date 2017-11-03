@@ -61,6 +61,17 @@ episcopal TestNestedFuncInQuery = increment 42 (where
 EndOfSample
 answers[TestNestedFuncInQuery]=43.0
 
+# Test getting an instance of a Bernoulli object.
+read -r -d '' codesamples[TestDistribution] << EndOfSample
+episcopal TestNestedFuncInQuery = Bernoulli 0.5 
+EndOfSample
+answers[TestDistribution]="Bernoulli p = 0.5"
+
+read -r -d '' codesamples[TestSampleBernoulli] << EndOfSample
+episcopal TestSampleBernoulli = sample Bernoulli 0.5 
+EndOfSample
+answers[TestSampleBernoulli]=0.0
+
 # Build the compiler.
 echo -e "${BLUE}--- Building Compiler ---${NC}\n"
 cabal clean; cabal build
@@ -79,7 +90,8 @@ done
 
 # Run tests over all of the classfiles.
 echo -e "\n${BLUE}--- Testing classfiles ---${NC}"
-CLASSFILES=output_classfiles/*
+javac -d output_classfiles lib/Distribution/*.java
+CLASSFILES=output_classfiles/Test*
 tests_passed=0
 total_tests=0
 for classfile in $CLASSFILES

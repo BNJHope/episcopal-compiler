@@ -9,6 +9,7 @@ Expression(..),
 Constant(..),
 Expr(..),
 Definition(..),
+Distribution(..),
 Arg,
 BinOp(..),
 Op(..)
