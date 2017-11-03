@@ -2,7 +2,7 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
-JASMIN_PATH="./bin/jasmin.jar"
+JASMIN_PATH="./lib/jasmin.jar"
 
 if [ ! -d output_progs ]; then
     mkdir output_progs
