@@ -143,6 +143,10 @@ compileObservation validityCheck exprToExecute vars
         -- Expression that determines validity
         validityCheckExpr
 
+        -- Convert the float object on the top of the stack
+        -- into an int so that it can be compared.
+        ++ getIntFromFloatObj
+
         -- Check if the expression resolves to valid.
         ++ [getObservationCheck]
 
@@ -387,7 +391,7 @@ getInitMethod = [getInitMethodHeader]
 
 -- | Get the instruction which causes the observation to be checked.
 getObservationCheck :: Instruction
-getObservationCheck = "ifgt PassedObervation"
+getObservationCheck = "ifgt PassedObservation"
 
 -- | Get the label for where valid observations should start
 -- | executing.
@@ -433,6 +437,15 @@ invokeCreateFloatObject = "invokestatic java/lang/Float/valueOf(F)Ljava/lang/Flo
 -- | of a float object.
 invokeFloatValueOf :: Instruction
 invokeFloatValueOf = "invokevirtual java/lang/Float/floatValue()F"
+
+-- Get the integer representation of a float object.
+getIntFromFloatObj :: [Instruction]
+getIntFromFloatObj = [invokeFloatValueOf] ++ [invokeFloatToInt]
+
+-- | Invoke the function for converting a float primitive
+-- | to an int primivite.
+invokeFloatToInt :: Instruction
+invokeFloatToInt = "f2i"
 
 -- | Get the header line for the main method.
 getMainMethodHeader :: Instruction

@@ -18,7 +18,9 @@ getTestASTs = [ast1,
     ast10,
     ast11,
     ast12,
-    ast13]
+    ast13,
+    ast14,
+    ast15]
 
 ast1 :: Program
 ast1 = Program "TestConst" constant1 []
@@ -58,6 +60,12 @@ ast12 = Program "TestFlip" exprFlipHalf []
 
 ast13 :: Program
 ast13 = Program "TestSampleFlip" (ExprSample exprFlipHalf) []
+
+ast14 :: Program
+ast14 = Program "TestObservationFalse" (ExprObserve constantFalse constant42) []
+
+ast15 :: Program
+ast15 = Program "TestObservationTrue" (ExprObserve constantTrue constant42) []
 
 func1 :: Expr
 func1 = ExprDef [funcDefSum] (funcCallSum constant42 constant42)
@@ -124,3 +132,9 @@ constantFive = ExprConstant $ EInt 5
 
 constantTwelve :: Expr
 constantTwelve = ExprConstant $ EInt 12
+
+constantTrue :: Expr
+constantTrue = ExprConstant $ EBoolean True
+
+constantFalse :: Expr
+constantFalse = ExprConstant $ EBoolean False
