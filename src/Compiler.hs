@@ -1,6 +1,5 @@
 module Compiler
-( compile,
-compileExpr
+( compile
 ) where
 
 import Data.Map (Map)
