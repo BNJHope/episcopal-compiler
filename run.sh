@@ -103,6 +103,76 @@ episcopal TestSampleNormal = sample Normal 5 0.5
 EndOfSample
 answers[TestSampleNormal]="Float value"
 
+read -r -d '' codesamples[TestSubtract] << EndOfSample
+episcopal TestSubtract = 42 - 5
+EndOfSample
+answers[TestSubtract]="37.0"
+
+read -r -d '' codesamples[TestMultiply] << EndOfSample
+episcopal TestMultiply = 42 * 5
+EndOfSample
+answers[TestMultiply]="210.0"
+
+read -r -d '' codesamples[TestOrTrueTrue] << EndOfSample
+episcopal TestOrTrueTrue = True or True
+EndOfSample
+answers[TestOrTrueTrue]="1.0"
+
+read -r -d '' codesamples[TestOrTrueFalse] << EndOfSample
+episcopal TestOrTrueFalse = True or False
+EndOfSample
+answers[TestOrTrueFalse]="1.0"
+
+read -r -d '' codesamples[TestOrFalseFalse] << EndOfSample
+episcopal TestOrFalseFalse = False or False
+EndOfSample
+answers[TestOrFalseFalse]="0.0"
+
+read -r -d '' codesamples[TestTrueTrue] << EndOfSample
+episcopal TestAndTrueTrue = True and True
+EndOfSample
+answers[TestAndTrueTrue]="1.0"
+
+read -r -d '' codesamples[TestAndTrueFalse] << EndOfSample
+episcopal TestAndTrueFalse = True and False
+EndOfSample
+answers[TestAndTrueFalse]="0.0"
+
+read -r -d '' codesamples[TestAndFalseFalse] << EndOfSample
+episcopal TestAndFalseFalse = False and False
+EndOfSample
+answers[TestAndFalseFalse]="0.0"
+
+read -r -d '' codesamples[Test42GreaterThan5] << EndOfSample
+episcopal Test42GreaterThan5 = 42 > 5
+EndOfSample
+answers[Test42GreaterThan5]="1.0"
+
+read -r -d '' codesamples[Test42LessThan5] << EndOfSample
+episcopal Test42LessThan5 = 42 < 5
+EndOfSample
+answers[Test42LessThan5]="-1.0"
+
+read -r -d '' codesamples[Test5GreaterThan42] << EndOfSample
+episcopal Test5GreaterThan42 = 5 > 42
+EndOfSample
+answers[Test5GreaterThan42]="-1.0"
+
+read -r -d '' codesamples[Test5LessThan42] << EndOfSample
+episcopal Test5LessThan42 = 5 < 42
+EndOfSample
+answers[Test5LessThan42]="1.0"
+
+read -r -d '' codesamples[Test5Equals42] << EndOfSample
+episcopal Test5Equals42 = 5 = 42
+EndOfSample
+answers[Test5Equals42]="-1.0"
+
+read -r -d '' codesamples[Test5Equals5] << EndOfSample
+episcopal Test5Equals5 = 5 = 5
+EndOfSample
+answers[Test5Equals5]="0.0"
+
 # Build the compiler.
 echo -e "${BLUE}--- Building Compiler ---${NC}\n"
 cabal clean; cabal build
@@ -124,8 +194,8 @@ echo -e "\n${BLUE}--- Testing classfiles ---${NC}"
 # javac -cp  -d output_classfiles lib/Distribution/*.java
 javac lib/Distribution/*.java -cp lib/commons-math3-3.6.1.jar -d output_classfiles
 CLASSFILES=output_classfiles/Test*
-#tests_passed=0
-#total_tests=0
+tests_passed=0
+total_tests=0
 for classfile in $CLASSFILES
 do
     filename=$(basename $classfile)
@@ -137,16 +207,16 @@ do
     actual=$(java -cp output_classfiles:"lib/commons-math3-3.6.1.jar" $testname)
     echo -e "\nExpected Result : $expected"
     echo "Actual Result : $actual"
-#    if [[ $expected == $actual ]];
-#    then
-#        let "tests_passed++"
-#    else
-#        echo -e "${RED}$testname FAILED"
-#    fi
-#    let "total_tests++"
+    if [[ $expected == $actual ]];
+    then
+        let "tests_passed++"
+    else
+        echo -e "${RED}$testname FAILED"
+    fi
+    let "total_tests++"
 done
 
-# Output the total results of the test.
-# echo -e "\n${BLUE}--- Test Results --- ${NC}\n"
-# echo -e "${GREEN}Tests Passed : $tests_passed"
-# echo -e "${GREEN}Total Tests : $total_tests\n"
+ # Output the total results of the test.
+ echo -e "\n${BLUE}--- Test Results --- ${NC}\n"
+ echo -e "${GREEN}Tests Passed : $tests_passed"
+ echo -e "${GREEN}Total Tests : $total_tests\n"

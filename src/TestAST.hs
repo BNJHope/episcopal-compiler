@@ -15,12 +15,25 @@ getTestASTs = [ast1,
     ast7,
     ast8,
     ast9,
-    ast10,
-    ast11,
     ast12,
     ast13,
-    ast14,
-    ast15]
+    ast15,
+    ast15,
+    ast16,
+    ast17,
+    ast18,
+    ast19,
+    ast20,
+    ast21,
+    ast22,
+    ast23,
+    ast24,
+    ast25,
+    ast26,
+    ast27,
+    ast28,
+    ast29,
+    ast30]
 
 ast1 :: Program
 ast1 = Program "TestConst" constant1 []
@@ -49,23 +62,61 @@ ast8 = Program "TestBeta" exprBetaFiveTwelve []
 ast9 :: Program
 ast9 = Program "TestSampleBeta" (ExprSample exprBetaFiveTwelve) []
 
-ast10 :: Program
-ast10 = Program "TestNormal" exprNormalFiveHalve []
-
-ast11 :: Program
-ast11 = Program "TestSampleNormal" (ExprSample exprNormalFiveHalve) []
-
 ast12 :: Program
 ast12 = Program "TestFlip" exprFlipHalf []
 
 ast13 :: Program
 ast13 = Program "TestSampleFlip" (ExprSample exprFlipHalf) []
 
-ast14 :: Program
-ast14 = Program "TestObservationFalse" (ExprObserve constantFalse constant42) []
-
 ast15 :: Program
-ast15 = Program "TestObservationTrue" (ExprObserve constantTrue constant42) []
+ast15 = Program "TestObservationFalse" (ExprObserve constantFalse constant42) []
+
+ast16 :: Program
+ast16 = Program "TestObservationTrue" (ExprObserve constantTrue constant42) []
+
+ast17 :: Program
+ast17 = Program "TestSubtract" subtractFortyTwoFive []
+
+ast18 :: Program
+ast18 = Program "TestMultiply" multiplyFortyTwoFive []
+
+ast19 :: Program
+ast19 = Program "TestOrTrueFalse" orTrueFalse []
+
+ast20 :: Program
+ast20 = Program "TestOrTrueTrue" orTrueTrue []
+
+ast21 :: Program
+ast21 = Program "TestOrFalseFalse" orFalseFalse []
+
+ast22 :: Program
+ast22 = Program "TestAndTrueFalse" andTrueFalse []
+
+ast23 :: Program
+ast23 = Program "TestAndTrueTrue" andTrueTrue []
+
+ast24 :: Program
+ast24 = Program "TestAndFalseFalse" andFalseFalse []
+
+--
+ast25 :: Program
+ast25 = Program "Test42GreaterThan5" fortyTwoGreaterThanFive []
+
+ast26 :: Program
+ast26 = Program "Test42LessThan5" fortyTwoLessThanFive []
+
+ast27 :: Program
+ast27 = Program "Test5GreaterThan42" fiveGreaterThanFortyTwo []
+
+ast28 :: Program
+ast28 = Program "Test5LessThan42" fiveLessThanFortyTwo []
+
+ast29 :: Program
+ast29 = Program "Test5Equals42" fiveEqualsFortyTwo []
+
+ast30 :: Program
+ast30 = Program "Test5Equals5" fiveEqualsFive []
+--
 
 func1 :: Expr
 func1 = ExprDef [funcDefSum] (funcCallSum constant42 constant42)
@@ -87,6 +138,51 @@ funcDefSum = (FuncDef "sum" ["x", "y"] [addXY])
 
 addXY :: Expr
 addXY = ExprBinOp $ BinOp ADD (ExprReference "x") (ExprReference "y")
+
+subtractFortyTwoFive :: Expr
+subtractFortyTwoFive = ExprBinOp $ BinOp SUBTRACT (constant42) (constantFive)
+
+multiplyFortyTwoFive :: Expr
+multiplyFortyTwoFive = ExprBinOp $ BinOp MULT (constant42) (constantFive)
+
+overFortyTwoAndTwo :: Expr
+overFortyTwoAndTwo = ExprBinOp $ BinOp MULT (constant42) (constantTwo)
+
+orTrueFalse :: Expr
+orTrueFalse = ExprBinOp $ BinOp OR (constantTrue) (constantFalse)
+
+orTrueTrue :: Expr
+orTrueTrue = ExprBinOp $ BinOp OR (constantTrue) (constantTrue)
+
+orFalseFalse :: Expr
+orFalseFalse = ExprBinOp $ BinOp OR (constantFalse) (constantFalse)
+
+andTrueFalse :: Expr
+andTrueFalse = ExprBinOp $ BinOp AND (constantTrue) (constantFalse)
+
+andTrueTrue :: Expr
+andTrueTrue = ExprBinOp $ BinOp AND (constantTrue) (constantTrue)
+
+andFalseFalse :: Expr
+andFalseFalse = ExprBinOp $ BinOp AND (constantFalse) (constantFalse)
+
+fortyTwoGreaterThanFive :: Expr
+fortyTwoGreaterThanFive = ExprBinOp $ BinOp GREATER_THAN (constant42) (constantFive)
+
+fortyTwoLessThanFive :: Expr
+fortyTwoLessThanFive = ExprBinOp $ BinOp LESS_THAN (constant42) (constantFive)
+
+fiveGreaterThanFortyTwo :: Expr
+fiveGreaterThanFortyTwo = ExprBinOp $ BinOp GREATER_THAN (constantFive) (constant42)
+
+fiveLessThanFortyTwo :: Expr
+fiveLessThanFortyTwo = ExprBinOp $ BinOp LESS_THAN (constantFive) (constant42)
+
+fiveEqualsFortyTwo :: Expr
+fiveEqualsFortyTwo = ExprBinOp $ BinOp EQUALS (constantFive) (constant42)
+
+fiveEqualsFive :: Expr
+fiveEqualsFive = ExprBinOp $ BinOp EQUALS (constantFive) (constantFive)
 
 funcCallSum :: Expr -> Expr -> Expr
 funcCallSum expr1 expr2 = ExprFunctionCall "sum" [expr1, expr2]
@@ -132,6 +228,9 @@ constantFive = ExprConstant $ EInt 5
 
 constantTwelve :: Expr
 constantTwelve = ExprConstant $ EInt 12
+
+constantTwo :: Expr
+constantTwo = ExprConstant $ EInt 2
 
 constantTrue :: Expr
 constantTrue = ExprConstant $ EBoolean True

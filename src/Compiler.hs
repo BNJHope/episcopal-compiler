@@ -398,7 +398,6 @@ getBinOpEqualityResultFunc =
     ++ ["ldc 1"]
     ++ ["i2f"]
     ++ ["EndEquality:"]
-    
 
 -- | Get the header of a method.
 getMethodHeader :: ID -> [Arg] -> Instruction
