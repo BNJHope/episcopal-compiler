@@ -59,6 +59,11 @@ compileMethod id args exprs vars =
     ++ otherFuncs
     where ((compiledExpr:otherFuncs), classes, _) = compileExprs exprs $ combineVars (createVarSet args 0) vars
 
+-- | Compile the main method and return
+-- | a list of functions where the first function
+-- | is the main method and the remaining functions
+-- | are functions that were found and compiled while
+-- | processing the main.
 compileMainMethod :: [Expr] -> VariableSet -> [FunctionResult]
 compileMainMethod exprs vars =
     [[getMainMethodHeader]
@@ -74,15 +79,16 @@ compileMainMethod exprs vars =
     where
         ((mainFunc:otherFuncs), classes , _) = compileExprs exprs vars
 
+-- | Compile a list of expressions with the given set of
+-- | variables.
 compileExprs :: [Expr] -> VariableSet -> CompileResult
--- compileExprs exprs vars = trace ("Compiling exprs\nVars: " ++ (show vars)) (compileExprs' exprs vars)
 compileExprs exprs vars = foldr compileExprFoldable ([], [], vars) exprs
 
+-- | The function to apply during the process of folding over
+-- | the expressions. It determines how to update the overall
+-- | compilation result depending on the result compiling the
+-- | next expression.
 compileExprFoldable :: Expr -> CompileResult -> CompileResult
-compileExprFoldable expr ([], classes, oldVars) = 
-    constructExprCompileResult ([], classes, oldVars) (newFuncs, newClasses, newVars)
-        where (newFuncs, newClasses, newVars) = compileExpr expr oldVars
-
 compileExprFoldable expr (funcs, classes, vars) =
     constructExprCompileResult (funcs, classes, vars) (newFuncs, newClasses, newVars)
     where (newFuncs, newClasses, newVars) = compileExpr expr vars
