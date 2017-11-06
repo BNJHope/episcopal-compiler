@@ -207,8 +207,6 @@ echo -e "\n${BLUE}--- Testing classfiles ---${NC}"
 # javac -cp  -d output_classfiles lib/Distribution/*.java
 javac lib/Distribution/*.java -cp lib/commons-math3-3.6.1.jar -d output_classfiles
 CLASSFILES=output_classfiles/Test*
-tests_passed=0
-total_tests=0
 for classfile in $CLASSFILES
 do
     filename=$(basename $classfile)
@@ -220,16 +218,4 @@ do
     actual=$(java -cp output_classfiles:"lib/commons-math3-3.6.1.jar" $testname)
     echo -e "\nExpected Result : $expected"
     echo "Actual Result : $actual"
-    if [[ $expected == $actual ]];
-    then
-        let "tests_passed++"
-    else
-        echo -e "${RED}$testname FAILED"
-    fi
-    let "total_tests++"
 done
-
- # Output the total results of the test.
- echo -e "\n${BLUE}--- Test Results --- ${NC}\n"
- echo -e "${GREEN}Tests Passed : $tests_passed"
- echo -e "${GREEN}Total Tests : $total_tests\n"
