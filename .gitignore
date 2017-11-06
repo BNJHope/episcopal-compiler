@@ -3,3 +3,4 @@ output_progs/
 output_classfiles/
 bin
 **/*.jar
+tests
