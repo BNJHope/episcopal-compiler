@@ -9,6 +9,7 @@ Expression(..),
 Constant(..),
 Expr(..),
 Definition(..),
+Distribution(..),
 Arg,
 BinOp(..),
 Op(..)
@@ -21,8 +22,9 @@ import Instruction
 type ID = String
 type VariableSet = Map ID [Instruction]
 type FunctionResult = [Instruction]
+type ClassResult = [FunctionResult]
 
-type CompileResult = ([FunctionResult], VariableSet)
+type CompileResult = ([FunctionResult], [ClassResult], VariableSet)
 
 data Expression = EExpr Expr
     | EConstant Constant

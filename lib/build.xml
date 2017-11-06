@@ -1,0 +1,31 @@
+<project name="Distribution" basedir="." default="build-clean">
+
+    <!--Variables for paths-->
+    <property name = "src.dir" value = "Distribution"/>
+    <property name = "build.dir" value = "build"/>
+    <property name= "classes.dir" value="../output_classfiles"/>
+    <property name= "jar.dir"     value="${build.dir}/dist"/>
+    <property name="main-class"  value=""/>
+
+    <!--Instructions for cleaning anything that was built-->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete file="${jar.dir}/${ant.project.name}.jar"/>
+    </target>
+
+    <!--Compiles Java source code into .class files-->
+    <target name = "compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}"/>
+    </target>
+
+    <!--Compiles source code files into a Java jar-->
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}" />
+    </target>
+
+    <!--Runs clean and then constructs the jar-->
+    <target name="build-clean" depends="clean, compile"/>
+
+</project>

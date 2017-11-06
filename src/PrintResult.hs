@@ -1,6 +1,7 @@
 module PrintResult (
 getPrintResultInstructions,
 printFloat,
+printObject,
 importPrintStreamInstruction,
 getNewLine,
 getComment
@@ -15,6 +16,9 @@ getPrintResultInstructions (ConstantResult res) = [importPrintStreamInstruction]
     ++ [loadConstantOntoStack res]
     ++ [convertConstantToString res]
     ++ [invokePrint]
+
+printObject :: Instruction
+printObject = "invokevirtual java/io/PrintStream/println(Ljava/lang/Object;)V"
 
 printFloat :: [Instruction]
 printFloat = [convertFloatToString]
